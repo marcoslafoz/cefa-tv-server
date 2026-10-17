@@ -1,0 +1,35 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_CORE_WS_URL: ${NEXT_PUBLIC_CORE_WS_URL:-}
+    container_name: cefa-tv-app-app
+    restart: unless-stopped
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - CORE_API_URL=http://cefa-tv-core-app:8080
+    networks:
+      - cefa-tv-net
+
+  nginx:
+    image: nginx:alpine
+    container_name: cefa-tv-app-nginx
+    restart: unless-stopped
+    ports:
+      - '${NGINX_HOST_PORT:-4000}:4000'
+    volumes:
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      - app
+    networks:
+      cefa-tv-net:
+        aliases:
+          - cefa-tv-app
+
+networks:
+  cefa-tv-net:
+    name: cefa-tv-net
+    external: true
