@@ -1,0 +1,87 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: cefa-tv-core-app
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      - DB_URL=jdbc:postgresql://db:5432/${DB_NAME:-cefatv}
+      - DB_USER=${DB_USER:-cefatv}
+      - DB_PASSWORD=${DB_PASSWORD:-cefatv}
+      - MINIO_ENDPOINT=http://minio:9000
+      - MINIO_ACCESS_KEY=${MINIO_ACCESS_KEY:-cefatv}
+      - MINIO_SECRET_KEY=${MINIO_SECRET_KEY:-cefatv-secret}
+    depends_on:
+      db:
+        condition: service_healthy
+      minio:
+        condition: service_started
+    ports:
+      - '${SERVER_PORT:-8080}:8080'
+    volumes:
+      - cefa-tv-core-tmp:/app/tmp
+    networks:
+      - cefa-tv-net
+      - internal
+
+  db:
+    image: postgres:16-alpine
+    container_name: cefa-tv-core-db
+    restart: unless-stopped
+    environment:
+      - POSTGRES_DB=${DB_NAME:-cefatv}
+      - POSTGRES_USER=${DB_USER:-cefatv}
+      - POSTGRES_PASSWORD=${DB_PASSWORD:-cefatv}
+    volumes:
+      - cefa-tv-core-db-data:/var/lib/postgresql/data
+    ports:
+      - '${DB_BIND_ADDRESS:-127.0.0.1}:${DB_PORT:-5432}:5432'
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U ${DB_USER:-cefatv} -d ${DB_NAME:-cefatv}']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - internal
+
+  minio:
+    image: ${MINIO_IMAGE:-quay.io/minio/minio:latest}
+    container_name: cefa-tv-core-minio
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      - MINIO_ROOT_USER=${MINIO_ACCESS_KEY:-cefatv}
+      - MINIO_ROOT_PASSWORD=${MINIO_SECRET_KEY:-cefatv-secret}
+    volumes:
+      - cefa-tv-core-minio-data:/data
+    ports:
+      - '${MINIO_API_PORT:-9000}:9000'
+      - '${MINIO_CONSOLE_PORT:-9001}:9001'
+    networks:
+      - internal
+
+  discovery:
+    build:
+      context: ./discovery
+      dockerfile: Dockerfile
+    container_name: cefa-tv-core-discovery
+    restart: unless-stopped
+    network_mode: host
+    environment:
+      - API_PORT=${SERVER_PORT:-8080}
+      - PUBLIC_URL=${PUBLIC_URL:-}
+
+volumes:
+  cefa-tv-core-db-data:
+  cefa-tv-core-minio-data:
+  cefa-tv-core-tmp:
+
+networks:
+  cefa-tv-net:
+    name: cefa-tv-net
+    external: true
+  internal:
+    driver: bridge

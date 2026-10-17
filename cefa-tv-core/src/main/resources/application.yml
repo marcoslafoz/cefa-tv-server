@@ -1,0 +1,79 @@
+server:
+  port: 8080
+  forward-headers-strategy: framework
+
+spring:
+  application:
+    name: cefa-tv-core
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/cefatv}
+    username: ${DB_USER:cefatv}
+    password: ${DB_PASSWORD:cefatv}
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        jdbc:
+          time_zone: UTC
+  flyway:
+    enabled: true
+  servlet:
+    multipart:
+      max-file-size: 8GB
+      max-request-size: 8GB
+      file-size-threshold: 2MB
+  jackson:
+    default-property-inclusion: always
+    serialization:
+      write-dates-as-timestamps: false
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+
+cefa:
+  tv:
+    public-url: ${PUBLIC_URL:}
+    app-base-url: ${APP_BASE_URL:http://localhost:4000}
+    microsoft:
+      tenant-id: ${AZURE_TENANT_ID:}
+      client-id: ${AZURE_CLIENT_ID:}
+      client-secret: ${AZURE_CLIENT_SECRET:}
+      redirect-uri: ${AZURE_REDIRECT_URI:}
+      auto-provision: ${MICROSOFT_AUTO_PROVISION:false}
+      default-group-id: ${MICROSOFT_DEFAULT_GROUP_ID:}
+    jwt:
+      secret: ${JWT_SECRET:change-me-change-me-change-me-change-me}
+      ttl-hours: 12
+      cookie-secure: ${COOKIE_SECURE:false}
+    admin:
+      username: ${ADMIN_USERNAME:}
+      password: ${ADMIN_PASSWORD:}
+    minio:
+      endpoint: ${MINIO_ENDPOINT:http://localhost:9000}
+      access-key: ${MINIO_ACCESS_KEY:cefatv}
+      secret-key: ${MINIO_SECRET_KEY:cefatv-secret}
+      bucket: ${MINIO_BUCKET:cefa-tv-media}
+    media:
+      ffmpeg-path: ${FFMPEG_PATH:ffmpeg}
+      ffprobe-path: ${FFPROBE_PATH:ffprobe}
+      pdf-dpi: 110
+      temp-dir: ${MEDIA_TEMP_DIR:}
+    manifest:
+      debounce-ms: 2000
+    player:
+      poll-interval-sec: 30
+      online-window-sec: 90
+      never-connected-flag-days: ${NEVER_CONNECTED_FLAG_DAYS:7}
+      never-connected-delete-days: ${NEVER_CONNECTED_DELETE_DAYS:14}
+    shell:
+      idle-timeout-sec: 900
+      max-duration-sec: 7200
