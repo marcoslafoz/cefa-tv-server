@@ -1193,5 +1193,137 @@
     },
     "preview": "Podgląd logo {logo}",
     "groupHint": "Dotyczy odtwarzaczy z grupy, które nie mają własnego logo."
+  },
+  "aracast": {
+    "badge": "Aracast",
+    "errors": {
+      "ARACAST_UNREACHABLE": "Aracast nie odpowiada. Sprawdź adres oraz czy urządzenie jest włączone i podłączone do sieci.",
+      "ARACAST_INVALID_RESPONSE": "Urządzenie odpowiada, ale nie wygląda na Aracast.",
+      "ARACAST_EXISTS": "Ten Aracast jest już zarejestrowany.",
+      "ARACAST_SSH_AUTH_FAILED": "Aracast odrzucił hasło SSH.",
+      "ARACAST_SSH_ERROR": "Nie udało się nawiązać połączenia SSH z Aracastem.",
+      "SITE_WITHOUT_RANGES": "Ta lokalizacja nie ma zakresów sieci. Edytuj ją i dodaj co najmniej jeden."
+    },
+    "fields": {
+      "model": "Model",
+      "version": "Wersja",
+      "mac": "Adres MAC",
+      "currentTemplate": "Szablon w emisji",
+      "uptime": "Czas działania",
+      "disk": "Dysk",
+      "diskFree": "Wolne {free} z {total}"
+    },
+    "add": {
+      "kindCefaTv": "Odtwarzacz CEFA TV",
+      "kindAracast": "Aracast",
+      "description": "Zarejestruj urządzenie Aracast, podając jego adres w sieci.",
+      "host": "Adres IP lub nazwa",
+      "hostPlaceholder": "192.168.1.50",
+      "probe": "Sprawdź",
+      "probeOk": "Znaleziono Aracast",
+      "probeFailed": "Nie udało się sprawdzić Aracasta.",
+      "name": "Nazwa ekranu (opcjonalnie)",
+      "namePlaceholder": "Recepcja, 2. piętro...",
+      "scopeRequiredHint": "Wskaż grupę lub lokalizację, którymi możesz zarządzać.",
+      "sshPassword": "Hasło SSH (opcjonalnie)",
+      "sshPasswordHint": "Jeśli zostawisz puste, zostanie użyte hasło serwera.",
+      "submit": "Dodaj",
+      "success": "Aracast został dodany.",
+      "failed": "Nie udało się dodać Aracasta."
+    },
+    "hardware": {
+      "title": "Urządzenie Aracast",
+      "empty": "Nie ma jeszcze danych urządzenia."
+    },
+    "settings": {
+      "title": "Ustawienia Aracast"
+    },
+    "connection": {
+      "title": "Połączenie i hasła",
+      "description": "Dane urządzenia i hasła, których CEFA TV używa do dostępu do niego.",
+      "host": "Adres",
+      "sshPassword": "Hasło SSH",
+      "ftpPassword": "Hasło FTP",
+      "own": "Własne",
+      "global": "Globalne serwera",
+      "keepPlaceholder": "Zostaw puste, aby nie zmieniać",
+      "globalPlaceholder": "Wpisz, aby użyć własnego",
+      "clear": "Usuń własne hasło i wróć do globalnego",
+      "save": "Zapisz hasła",
+      "saved": "Hasła zostały zaktualizowane.",
+      "saveFailed": "Nie udało się zaktualizować haseł.",
+      "loadFailed": "Nie udało się wczytać danych połączenia."
+    },
+    "clock": {
+      "title": "Zegar",
+      "description": "Czas urządzenia i synchronizacja.",
+      "playerTime": "Czas urządzenia",
+      "timezone": "Strefa czasowa",
+      "offset": "Różnica względem serwera",
+      "offsetFormat": "{seconds} s",
+      "ntpServer": "Serwer NTP (opcjonalnie)",
+      "ntpServerPlaceholder": "pool.ntp.org",
+      "syncServer": "Synchronizuj z serwerem",
+      "syncNtp": "Synchronizuj przez NTP",
+      "synced": "Zegar został zsynchronizowany.",
+      "syncFailed": "Nie udało się zsynchronizować zegara.",
+      "loadFailed": "Nie udało się odczytać zegara urządzenia."
+    },
+    "network": {
+      "title": "Sieć",
+      "description": "Konfiguracja sieci urządzenia. Widoczna tylko dla administratorów.",
+      "configured": "Skonfigurowana",
+      "effective": "Aktywna",
+      "fields": {
+        "type": "Typ",
+        "hostname": "Nazwa urządzenia",
+        "ip": "Adres IP",
+        "netmask": "Maska sieci",
+        "gateway": "Brama",
+        "dnsPrimary": "Główny DNS",
+        "dnsSecondary": "Dodatkowy DNS"
+      },
+      "types": {
+        "static": "Stały IP",
+        "dhcp": "DHCP"
+      },
+      "invalidHostname": "Używaj tylko liter, cyfr i myślników.",
+      "invalidIp": "Wpisz poprawny adres IPv4, na przykład 192.168.1.50.",
+      "reboot": "Uruchom ponownie urządzenie po zapisaniu",
+      "rebootHint": "Niektóre zmiany działają dopiero po ponownym uruchomieniu.",
+      "rebootRequired": "Zmiana adresu IP, maski lub bramy wymaga ponownego uruchomienia.",
+      "offline": "Urządzenie jest offline: teraz nie można zmienić sieci.",
+      "save": "Zapisz sieć",
+      "saved": "Konfiguracja sieci została wysłana.",
+      "saveFailed": "Nie udało się zapisać konfiguracji sieci.",
+      "loadFailed": "Nie udało się odczytać konfiguracji sieci.",
+      "ipChanged": "Nowy adres urządzenia to {host}.",
+      "rebooting": "Urządzenie uruchamia się ponownie i wróci za chwilę.",
+      "confirmTitle": "Zmiana konfiguracji sieci",
+      "confirmDescription": "Zamierzasz zmienić adres IP, maskę lub bramę, a urządzenie zostanie uruchomione ponownie. Jeśli się pomylisz, może stać się niedostępne z CEFA TV, dopóki ktoś nie naprawi tego na miejscu. Nowy adres IP to {ip}.",
+      "confirmAction": "Zmień i uruchom ponownie"
+    },
+    "ranges": {
+      "label": "Zakresy sieci",
+      "placeholder": "10.21.34.0/23",
+      "hint": "Jeden zakres CIDR w wierszu. Służą do wyszukiwania urządzeń Aracast w lokalizacji.",
+      "invalid": "Nieprawidłowy format: {ranges}. Użyj formatu 10.21.34.0/23."
+    },
+    "discovery": {
+      "button": "Szukaj Aracast",
+      "title": "Aracast w {name}",
+      "description": "Wyszukiwanie urządzeń Aracast w zakresach sieci lokalizacji.",
+      "scanning": "Przeszukiwanie sieci lokalizacji...",
+      "failed": "Nie udało się zakończyć wyszukiwania.",
+      "summary": "Przeskanowano adresów: {scanned}, czas: {seconds} s.",
+      "noneFound": "Nie znaleziono żadnego Aracasta w zakresach lokalizacji.",
+      "registered": "Już zarejestrowany",
+      "open": "Otwórz",
+      "added": "Aracast został dodany do lokalizacji.",
+      "sshPassword": "Hasło SSH dla dodawanych (opcjonalnie)",
+      "offlineTitle": "Zarejestrowane, ale nie odpowiadają",
+      "offlineHint": "Te urządzenia Aracast są już zarejestrowane w lokalizacji, ale nie odpowiedziały na wyszukiwanie.",
+      "rescan": "Szukaj ponownie"
+    }
   }
 }

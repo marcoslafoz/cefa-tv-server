@@ -17,6 +17,9 @@ import {
 import { ContentEditor } from '@/components/content/content-editor'
 import { NowPlayingPanel } from '@/components/content/now-playing'
 import { TargetSchedules } from '@/components/content/target-schedules'
+import { AracastBadge } from '@/components/players/aracast-badge'
+import { AracastHardwarePanel } from '@/components/players/aracast-hardware-panel'
+import { AracastSettings } from '@/components/players/aracast-settings'
 import { DisplaysPanel } from '@/components/players/displays-panel'
 import { formatPlayerVersion } from '@/components/players/player-version'
 import { AUTO_OUTPUT, OutputSelect } from '@/components/players/output-select'
@@ -97,6 +100,7 @@ function PlayerDetail() {
   const canRemote = canOnPlayer(user, 'PLAYER_REMOTE', scope, 'OPERATE')
   const canTerminal = hasPermission(user, 'PLAYER_TERMINAL') && Boolean(user?.admin)
   const canProgram = canOnPlayer(user, 'SCHEDULE_MANAGE', scope, 'OPERATE')
+  const isAracast = current?.kind === 'ARACAST'
   const name = edits.name ?? current?.name ?? ''
   const groupId = edits.groupId ?? current?.groupId ?? NO_GROUP
   const orientation = edits.orientation ?? current?.orientation ?? 'LANDSCAPE'
@@ -120,19 +124,19 @@ function PlayerDetail() {
       await api.players.update(id, {
         name: name.trim(),
         groupId: groupId === NO_GROUP ? null : groupId,
-        orientation,
+        ...(isAracast ? {} : { orientation }),
         ...(edits.description === undefined ? {} : { description: edits.description.trim() }),
         ...(edits.siteId === undefined || inheritedFrom !== null
           ? {}
           : edits.siteId === NO_SITE
             ? { clearSite: true }
             : { siteId: edits.siteId }),
-        ...(edits.idleLogo === undefined
+        ...(isAracast || edits.idleLogo === undefined
           ? {}
           : edits.idleLogo === IDLE_LOGO_INHERIT
             ? { clearIdleLogo: true }
             : { idleLogo: edits.idleLogo }),
-        ...(edits.output === undefined
+        ...(isAracast || edits.output === undefined
           ? {}
           : edits.output === AUTO_OUTPUT
             ? { clearPreferredOutput: true }
@@ -200,6 +204,7 @@ function PlayerDetail() {
             <h1 className="flex items-center gap-2 text-2xl font-semibold tracking-tight">
               {current.name}
               <OnlineDot online={current.online} />
+              <AracastBadge player={current} />
             </h1>
             {current.description ? (
               <Tooltip>
@@ -243,9 +248,11 @@ function PlayerDetail() {
               <Button variant="outline" onClick={() => void command('resync')}>
                 <IconWorldDownload /> {dict.players.resync}
               </Button>
-              <Button variant="outline" onClick={() => void command('reload')}>
-                <IconRefresh /> {dict.players.reload}
-              </Button>
+              {isAracast ? null : (
+                <Button variant="outline" onClick={() => void command('reload')}>
+                  <IconRefresh /> {dict.players.reload}
+                </Button>
+              )}
               <Button variant="outline" onClick={() => void command('restart')}>
                 <IconPower /> {dict.players.restart}
               </Button>
@@ -360,21 +367,23 @@ function PlayerDetail() {
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="space-y-2">
-                  <Label>{dict.players.orientation}</Label>
-                  <Select
-                    value={orientation}
-                    onValueChange={(value) => setOrientation(value as Orientation)}
-                  >
-                    <SelectTrigger className="w-full">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="LANDSCAPE">{dict.players.landscape}</SelectItem>
-                      <SelectItem value="PORTRAIT">{dict.players.portrait}</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
+                {isAracast ? null : (
+                  <div className="space-y-2">
+                    <Label>{dict.players.orientation}</Label>
+                    <Select
+                      value={orientation}
+                      onValueChange={(value) => setOrientation(value as Orientation)}
+                    >
+                      <SelectTrigger className="w-full">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="LANDSCAPE">{dict.players.landscape}</SelectItem>
+                        <SelectItem value="PORTRAIT">{dict.players.portrait}</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
                 <div className="space-y-2 sm:col-span-2">
                   <Label htmlFor="player-description">{dict.players.descriptionLabel}</Label>
                   <Input
@@ -385,42 +394,46 @@ function PlayerDetail() {
                     onChange={(event) => setDescription(event.target.value)}
                   />
                 </div>
-                <OutputSelect player={current} value={output} onChange={setOutput} />
-                <IdleLogoSelect
-                  value={idleLogo}
-                  onChange={setIdleLogo}
-                  disabled={!canManage}
-                  hint={dict.idleLogo.hint}
-                  status={idleLogoStatus(current)}
-                  inheritLogo={selectedGroup?.idleLogo ?? DEFAULT_IDLE_LOGO}
-                  inheritLabel={
-                    selectedGroup?.idleLogo
-                      ? dict.idleLogo.inheritFromGroup
-                          .replace('{group}', selectedGroup.name)
-                          .replace('{logo}', dict.idleLogo.logos[selectedGroup.idleLogo])
-                      : dict.idleLogo.inheritDefault.replace(
-                          '{logo}',
-                          dict.idleLogo.logos[DEFAULT_IDLE_LOGO]
-                        )
-                  }
-                  effective={
-                    current.effectiveIdleLogo
-                      ? {
-                          logo: current.effectiveIdleLogo,
-                          text: `${dict.idleLogo.effective.replace('{logo}', dict.idleLogo.logos[current.effectiveIdleLogo])} (${
-                            current.idleLogoSource === 'PLAYER'
-                              ? dict.idleLogo.sourcePlayer
-                              : current.idleLogoSource === 'GROUP'
-                                ? dict.idleLogo.sourceGroup.replace(
-                                    '{group}',
-                                    current.groupName ?? ''
-                                  )
-                                : dict.idleLogo.sourceDefault
-                          })`,
-                        }
-                      : null
-                  }
-                />
+                {isAracast ? null : (
+                  <>
+                    <OutputSelect player={current} value={output} onChange={setOutput} />
+                    <IdleLogoSelect
+                      value={idleLogo}
+                      onChange={setIdleLogo}
+                      disabled={!canManage}
+                      hint={dict.idleLogo.hint}
+                      status={idleLogoStatus(current)}
+                      inheritLogo={selectedGroup?.idleLogo ?? DEFAULT_IDLE_LOGO}
+                      inheritLabel={
+                        selectedGroup?.idleLogo
+                          ? dict.idleLogo.inheritFromGroup
+                              .replace('{group}', selectedGroup.name)
+                              .replace('{logo}', dict.idleLogo.logos[selectedGroup.idleLogo])
+                          : dict.idleLogo.inheritDefault.replace(
+                              '{logo}',
+                              dict.idleLogo.logos[DEFAULT_IDLE_LOGO]
+                            )
+                      }
+                      effective={
+                        current.effectiveIdleLogo
+                          ? {
+                              logo: current.effectiveIdleLogo,
+                              text: `${dict.idleLogo.effective.replace('{logo}', dict.idleLogo.logos[current.effectiveIdleLogo])} (${
+                                current.idleLogoSource === 'PLAYER'
+                                  ? dict.idleLogo.sourcePlayer
+                                  : current.idleLogoSource === 'GROUP'
+                                    ? dict.idleLogo.sourceGroup.replace(
+                                        '{group}',
+                                        current.groupName ?? ''
+                                      )
+                                    : dict.idleLogo.sourceDefault
+                              })`,
+                            }
+                          : null
+                      }
+                    />
+                  </>
+                )}
                 <div className="flex items-end justify-between gap-3 rounded-lg border px-3 py-2">
                   <Label htmlFor="player-enabled">{dict.players.enabled}</Label>
                   <Switch
@@ -457,7 +470,9 @@ function PlayerDetail() {
                   ['IP', current.ip ?? '-'],
                   [dict.players.hostname, current.hostname ?? '-'],
                   [dict.players.resolution, current.resolution ?? '-'],
-                  [dict.players.playerVersion, formatPlayerVersion(current) ?? '-'],
+                  ...(isAracast
+                    ? []
+                    : [[dict.players.playerVersion, formatPlayerVersion(current) ?? '-']]),
                   [dict.players.timezone, current.timezone ?? '-'],
                 ] as Array<[string, string]>
               ).map(([label, value]) => (
@@ -476,17 +491,26 @@ function PlayerDetail() {
         </Card>
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-2">
-        <SystemPanel system={current.system} />
-        <DisplaysPanel
-          playerId={id}
-          displays={current.displays}
-          online={current.online}
-          canManage={canManage}
-        />
-      </div>
+      {isAracast ? (
+        <>
+          <AracastHardwarePanel hardware={current.hardware} />
+          {canManage ? <AracastSettings player={current} isAdmin={Boolean(user?.admin)} /> : null}
+        </>
+      ) : (
+        <>
+          <div className="grid gap-4 lg:grid-cols-2">
+            <SystemPanel system={current.system} />
+            <DisplaysPanel
+              playerId={id}
+              displays={current.displays}
+              online={current.online}
+              canManage={canManage}
+            />
+          </div>
 
-      <MetricsCharts playerId={id} system={current.system} />
+          <MetricsCharts playerId={id} system={current.system} />
+        </>
+      )}
 
       <Card>
         <CardHeader>

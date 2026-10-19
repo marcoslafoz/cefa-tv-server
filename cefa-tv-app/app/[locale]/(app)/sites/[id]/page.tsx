@@ -9,12 +9,15 @@ import {
   IconClock,
   IconDeviceTv,
   IconMapPin,
+  IconRadar2,
   IconPencil,
   IconPlus,
   IconTrash,
   IconX,
 } from '@tabler/icons-react'
+import { AracastBadge } from '@/components/players/aracast-badge'
 import { AddPlayersDialog } from '@/components/sites/add-players-dialog'
+import { AracastDiscoveryDialog } from '@/components/sites/aracast-discovery-dialog'
 import { DeleteSiteDialog } from '@/components/sites/delete-site-dialog'
 import { SiteDialog } from '@/components/sites/site-dialog'
 import { DeliveryBadge } from '@/components/shared/delivery-state'
@@ -52,6 +55,7 @@ function SiteDetail() {
   const [editing, setEditing] = useState(false)
   const [deleting, setDeleting] = useState(false)
   const [adding, setAdding] = useState(false)
+  const [discovering, setDiscovering] = useState(false)
   const isAdmin = Boolean(user?.admin)
   const canManagePlayers =
     hasPermission(user, 'PLAYER_MANAGE') && canAccessSite(user, id, 'OPERATE')
@@ -104,6 +108,11 @@ function SiteDetail() {
               <IconPlus /> {dict.sites.addPlayers}
             </Button>
           ) : null}
+          {canManagePlayers ? (
+            <Button variant="outline" onClick={() => setDiscovering(true)}>
+              <IconRadar2 /> {dict.aracast.discovery.button}
+            </Button>
+          ) : null}
           {isAdmin ? (
             <>
               <Button variant="outline" onClick={() => setEditing(true)}>
@@ -133,6 +142,17 @@ function SiteDetail() {
         </Badge>
       </div>
 
+      {current.ipRanges.length > 0 ? (
+        <div className="flex flex-wrap items-center gap-1.5">
+          <span className="text-muted-foreground text-sm">{dict.aracast.ranges.label}</span>
+          {current.ipRanges.map((range) => (
+            <Badge key={range} variant="outline" className="font-mono">
+              {range}
+            </Badge>
+          ))}
+        </div>
+      ) : null}
+
       <Card>
         <CardHeader>
           <CardTitle>{dict.sites.playersTitle}</CardTitle>
@@ -150,7 +170,10 @@ function SiteDetail() {
                   >
                     <IconDeviceTv className="text-muted-foreground size-4 shrink-0" />
                     <span className="min-w-0">
-                      <span className="block truncate text-sm font-medium">{player.name}</span>
+                      <span className="flex items-center gap-1.5 text-sm font-medium">
+                        <span className="truncate">{player.name}</span>
+                        <AracastBadge player={player} />
+                      </span>
                       {player.description ? (
                         <span className="text-muted-foreground block truncate text-xs">
                           {player.description}
@@ -196,6 +219,13 @@ function SiteDetail() {
           sites={asList(allSites.data)}
           onClose={() => setDeleting(false)}
           onDeleted={() => router.replace(localePath('/sites'))}
+        />
+      ) : null}
+      {discovering ? (
+        <AracastDiscoveryDialog
+          site={current}
+          onClose={() => setDiscovering(false)}
+          onAdded={() => void Promise.all([players.reload(), site.reload()])}
         />
       ) : null}
       {adding ? (

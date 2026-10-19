@@ -1193,5 +1193,137 @@
     },
     "preview": "Vista previa del logo {logo}",
     "groupHint": "Se aplica a los reproductores del grupo que no tengan un logo propio."
+  },
+  "aracast": {
+    "badge": "Aracast",
+    "errors": {
+      "ARACAST_UNREACHABLE": "El Aracast no responde. Comprueba la dirección y que esté encendido y conectado a la red.",
+      "ARACAST_INVALID_RESPONSE": "El equipo responde, pero no parece un Aracast.",
+      "ARACAST_EXISTS": "Ese Aracast ya está dado de alta.",
+      "ARACAST_SSH_AUTH_FAILED": "El Aracast ha rechazado la contraseña SSH.",
+      "ARACAST_SSH_ERROR": "No se ha podido establecer la conexión SSH con el Aracast.",
+      "SITE_WITHOUT_RANGES": "Esta sede no tiene rangos de red. Edítala y añade al menos uno."
+    },
+    "fields": {
+      "model": "Modelo",
+      "version": "Versión",
+      "mac": "Dirección MAC",
+      "currentTemplate": "Plantilla en emisión",
+      "uptime": "Tiempo encendido",
+      "disk": "Disco",
+      "diskFree": "{free} libres de {total}"
+    },
+    "add": {
+      "kindCefaTv": "Reproductor CEFA TV",
+      "kindAracast": "Aracast",
+      "description": "Da de alta una caja Aracast indicando su dirección en la red.",
+      "host": "Dirección IP o nombre",
+      "hostPlaceholder": "192.168.1.50",
+      "probe": "Comprobar",
+      "probeOk": "Aracast encontrado",
+      "probeFailed": "No se ha podido comprobar el Aracast.",
+      "name": "Nombre de la pantalla (opcional)",
+      "namePlaceholder": "Recepción, planta 2...",
+      "scopeRequiredHint": "Indica un grupo o una sede sobre los que puedas operar.",
+      "sshPassword": "Contraseña SSH (opcional)",
+      "sshPasswordHint": "Si la dejas vacía se usa la del servidor.",
+      "submit": "Añadir",
+      "success": "Aracast añadido.",
+      "failed": "No se ha podido añadir el Aracast."
+    },
+    "hardware": {
+      "title": "Equipo Aracast",
+      "empty": "Todavía no hay datos del equipo."
+    },
+    "settings": {
+      "title": "Ajustes Aracast"
+    },
+    "connection": {
+      "title": "Conexión y contraseñas",
+      "description": "Datos del equipo y contraseñas que usa CEFA TV para acceder a él.",
+      "host": "Dirección",
+      "sshPassword": "Contraseña SSH",
+      "ftpPassword": "Contraseña FTP",
+      "own": "Propia",
+      "global": "Global del servidor",
+      "keepPlaceholder": "Déjala vacía para no cambiarla",
+      "globalPlaceholder": "Escribe una para usar una propia",
+      "clear": "Borrar la contraseña propia y volver a la global",
+      "save": "Guardar contraseñas",
+      "saved": "Contraseñas actualizadas.",
+      "saveFailed": "No se han podido actualizar las contraseñas.",
+      "loadFailed": "No se han podido cargar los datos de conexión."
+    },
+    "clock": {
+      "title": "Reloj",
+      "description": "Hora del equipo y sincronización.",
+      "playerTime": "Hora del equipo",
+      "timezone": "Zona horaria",
+      "offset": "Desfase con el servidor",
+      "offsetFormat": "{seconds} s",
+      "ntpServer": "Servidor NTP (opcional)",
+      "ntpServerPlaceholder": "pool.ntp.org",
+      "syncServer": "Sincronizar con el servidor",
+      "syncNtp": "Sincronizar con NTP",
+      "synced": "Reloj sincronizado.",
+      "syncFailed": "No se ha podido sincronizar el reloj.",
+      "loadFailed": "No se ha podido leer el reloj del equipo."
+    },
+    "network": {
+      "title": "Red",
+      "description": "Configuración de red del equipo. Solo la ven los administradores.",
+      "configured": "Configurada",
+      "effective": "Activa",
+      "fields": {
+        "type": "Tipo",
+        "hostname": "Nombre del equipo",
+        "ip": "Dirección IP",
+        "netmask": "Máscara de red",
+        "gateway": "Puerta de enlace",
+        "dnsPrimary": "DNS principal",
+        "dnsSecondary": "DNS secundario"
+      },
+      "types": {
+        "static": "IP fija",
+        "dhcp": "DHCP"
+      },
+      "invalidHostname": "Usa solo letras, números y guiones.",
+      "invalidIp": "Introduce una dirección IPv4 válida, por ejemplo 192.168.1.50.",
+      "reboot": "Reiniciar el equipo al guardar",
+      "rebootHint": "Algunos cambios solo se aplican tras reiniciar.",
+      "rebootRequired": "Cambiar la IP, la máscara o la puerta de enlace obliga a reiniciar.",
+      "offline": "El equipo está sin conexión: no se puede cambiar la red ahora.",
+      "save": "Guardar red",
+      "saved": "Configuración de red enviada.",
+      "saveFailed": "No se ha podido guardar la configuración de red.",
+      "loadFailed": "No se ha podido leer la configuración de red.",
+      "ipChanged": "La nueva dirección del equipo es {host}.",
+      "rebooting": "El equipo se está reiniciando y tardará un momento en volver.",
+      "confirmTitle": "Cambiar la configuración de red",
+      "confirmDescription": "Vas a cambiar la IP, la máscara o la puerta de enlace y el equipo se reiniciará. Si te equivocas, puede quedar inaccesible desde CEFA TV hasta que alguien lo corrija en el sitio. La nueva IP será {ip}.",
+      "confirmAction": "Cambiar y reiniciar"
+    },
+    "ranges": {
+      "label": "Rangos de red",
+      "placeholder": "10.21.34.0/23",
+      "hint": "Un rango CIDR por línea. Se usan para buscar Aracast en la sede.",
+      "invalid": "Formato no válido: {ranges}. Usa el formato 10.21.34.0/23."
+    },
+    "discovery": {
+      "button": "Buscar Aracast",
+      "title": "Aracast en {name}",
+      "description": "Búsqueda de equipos Aracast en los rangos de red de la sede.",
+      "scanning": "Buscando en la red de la sede...",
+      "failed": "No se ha podido completar la búsqueda.",
+      "summary": "{scanned} direcciones analizadas en {seconds} s.",
+      "noneFound": "No se ha encontrado ningún Aracast en los rangos de la sede.",
+      "registered": "Ya registrado",
+      "open": "Abrir",
+      "added": "Aracast añadido a la sede.",
+      "sshPassword": "Contraseña SSH para los que añadas (opcional)",
+      "offlineTitle": "Dados de alta que no responden",
+      "offlineHint": "Estos Aracast ya están registrados en la sede pero no han respondido a la búsqueda.",
+      "rescan": "Buscar de nuevo"
+    }
   }
 }

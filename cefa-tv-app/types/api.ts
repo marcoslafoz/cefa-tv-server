@@ -37,6 +37,7 @@ export interface Site {
   city: string | null
   country: string | null
   timezone: string | null
+  ipRanges: string[]
   playerCount: number
   onlineCount: number
 }
@@ -46,6 +47,7 @@ export interface SiteInput {
   city: string | null
   country: string | null
   timezone: string | null
+  ipRanges: string[]
 }
 
 export interface AuthUser {
@@ -109,6 +111,11 @@ export interface UserGroupInput {
   permissions: Permission[]
   memberIds: string[]
   grants: AccessGrant[]
+}
+
+export interface PlayerInstallInfo {
+  repoUrl: string
+  command: string
 }
 
 export interface PendingPairing {
@@ -196,8 +203,20 @@ export type Orientation = 'LANDSCAPE' | 'PORTRAIT'
 export type IdleLogo = 'CEFA' | 'ALGONTEC'
 export type IdleLogoSource = 'PLAYER' | 'GROUP' | 'DEFAULT'
 
+export type PlayerKind = 'CEFA_TV' | 'ARACAST'
+
+export interface AracastHardware {
+  model: string | null
+  mac: string | null
+  uptime: string | null
+  diskTotalBytes: number | null
+  diskFreeBytes: number | null
+  currentTemplate: string | null
+}
+
 export interface Player {
   id: string
+  kind: PlayerKind
   name: string
   description?: string | null
   groupId: string | null
@@ -231,6 +250,113 @@ export interface Player {
   idleLogoSource?: IdleLogoSource | null
   system?: PlayerSystem | null
   displays?: PlayerDisplay[] | null
+  hardware?: AracastHardware | null
+}
+
+export interface AracastStatus {
+  host: string
+  version: string | null
+  model: string | null
+  mac: string | null
+  ip: string | null
+  uptime: string | null
+  resolution: string | null
+  currentTemplate: string | null
+  nextTemplate: string | null
+  nextTemplateTime: string | null
+  defaultTemplate: string | null
+  totalBytes: number | null
+  freeBytes: number | null
+  playerTime: string | null
+  timezone: string | null
+  clockOffsetSeconds: number | null
+}
+
+export interface AracastCreateInput {
+  host: string
+  name?: string
+  description?: string
+  groupId?: string
+  siteId?: string
+  sshPassword?: string
+  ftpPassword?: string
+}
+
+export interface AracastConnection {
+  playerId: string
+  host: string
+  mac: string | null
+  model: string | null
+  sshPasswordConfigured: boolean
+  ftpPasswordConfigured: boolean
+}
+
+export interface AracastCredentialsInput {
+  sshPassword?: string | null
+  ftpPassword?: string | null
+}
+
+export interface AracastClock {
+  playerTime: string | null
+  timezone: string | null
+  offsetSeconds: number | null
+}
+
+export type AracastClockMode = 'SERVER' | 'NTP'
+
+export interface AracastClockResult extends AracastClock {
+  method: string | null
+  detail: string | null
+}
+
+export interface AracastNetworkConfig {
+  hostname: string | null
+  type: 'static' | 'dhcp' | null
+  ip: string | null
+  netmask: string | null
+  gateway: string | null
+  dnsPrimary: string | null
+  dnsSecondary: string | null
+}
+
+export interface AracastNetwork {
+  configured: AracastNetworkConfig
+  effective: AracastNetworkConfig
+}
+
+export interface AracastNetworkInput {
+  hostname: string
+  ip: string
+  netmask: string
+  gateway: string
+  dnsPrimary: string
+  dnsSecondary?: string
+  reboot: boolean
+}
+
+export interface AracastNetworkResult {
+  host: string
+  ipChanged: boolean
+  rebooting: boolean
+  message: string | null
+}
+
+export interface AracastFound {
+  host: string
+  hostname: string | null
+  mac: string | null
+  model: string | null
+  version: string | null
+  registered: boolean
+  playerId: string | null
+}
+
+export interface AracastDiscovery {
+  siteId: string
+  scanned: number
+  durationMs: number
+  found: AracastFound[]
+  offline: string[]
 }
 
 export interface PlayerSystem {

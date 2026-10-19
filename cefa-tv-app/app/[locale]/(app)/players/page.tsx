@@ -18,6 +18,7 @@ import {
   IconTrash,
   IconX,
 } from '@tabler/icons-react'
+import { AracastBadge } from '@/components/players/aracast-badge'
 import { FilterMultiSelect } from '@/components/players/filter-multi-select'
 import { PairDialog } from '@/components/players/pair-dialog'
 import { OutdatedBadge } from '@/components/players/outdated-badge'
@@ -288,7 +289,10 @@ function PlayersContent() {
           <div className="space-y-3 px-4 pb-4">
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
-                <p className="truncate font-medium">{player.name}</p>
+                <p className="flex items-center gap-1.5 font-medium">
+                  <span className="truncate">{player.name}</span>
+                  <AracastBadge player={player} />
+                </p>
                 <p className="text-muted-foreground truncate text-xs">
                   {[player.siteName, player.groupName ?? dict.players.noGroup, player.ip]
                     .filter(Boolean)
@@ -345,7 +349,10 @@ function PlayersContent() {
           />
           <div className="space-y-1.5 px-3 pb-3">
             <div className="flex items-center justify-between gap-2">
-              <p className="truncate text-sm font-medium">{player.name}</p>
+              <p className="flex min-w-0 items-center gap-1.5 text-sm font-medium">
+                <span className="truncate">{player.name}</span>
+                <AracastBadge player={player} />
+              </p>
               <Tooltip>
                 <TooltipTrigger asChild>
                   <span>
@@ -465,7 +472,10 @@ function PlayersContent() {
                   <div className="flex min-w-0 items-center gap-2">
                     <OnlineDot online={player.online} />
                     <div className="min-w-0">
-                      <p className="truncate font-medium">{player.name}</p>
+                      <p className="flex items-center gap-1.5 font-medium">
+                        <span className="truncate">{player.name}</span>
+                        <AracastBadge player={player} />
+                      </p>
                       {description(player, 'max-w-64 truncate')}
                     </div>
                   </div>

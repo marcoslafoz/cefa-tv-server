@@ -1,5 +1,14 @@
 import { API_V1, CORE_API_PREFIX, apiClient } from '@/lib/api-client'
 import type {
+  AracastClockMode,
+  AracastClockResult,
+  AracastConnection,
+  AracastCreateInput,
+  AracastCredentialsInput,
+  AracastDiscovery,
+  AracastNetworkInput,
+  AracastNetworkResult,
+  AracastStatus,
   AuditAction,
   AuditEvent,
   AuditFilters,
@@ -95,6 +104,23 @@ export const api = {
       apiClient.delete<void>(
         `${API_V1}/sites/${id}${reassignTo ? `?reassignTo=${reassignTo}` : ''}`
       ),
+    discoverAracast: (id: string) =>
+      apiClient.post<AracastDiscovery>(`${API_V1}/sites/${id}/aracast/discover`),
+  },
+
+  aracast: {
+    probe: (host: string) =>
+      apiClient.get<AracastStatus>(
+        `${API_V1}/players/aracast/probe?host=${encodeURIComponent(host)}`
+      ),
+    create: (input: AracastCreateInput) =>
+      apiClient.post<Player>(`${API_V1}/players/aracast`, input),
+    updateCredentials: (playerId: string, input: AracastCredentialsInput) =>
+      apiClient.put<AracastConnection>(`${API_V1}/players/aracast/${playerId}/credentials`, input),
+    setClock: (playerId: string, input: { mode: AracastClockMode; server?: string }) =>
+      apiClient.post<AracastClockResult>(`${API_V1}/players/${playerId}/aracast/clock`, input),
+    setNetwork: (playerId: string, input: AracastNetworkInput) =>
+      apiClient.put<AracastNetworkResult>(`${API_V1}/players/${playerId}/aracast/network`, input),
   },
 
   folders: {

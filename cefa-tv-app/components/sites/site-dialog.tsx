@@ -14,9 +14,11 @@ import {
 } from '@/components/shadcn-ui/dialog'
 import { Input } from '@/components/shadcn-ui/input'
 import { Label } from '@/components/shadcn-ui/label'
+import { Textarea } from '@/components/shadcn-ui/textarea'
 import { useDictionary } from '@/contexts/dictionary-context'
 import { api } from '@/lib/api'
 import { apiErrorMessage } from '@/lib/api-client'
+import { isCidr, parseIpRanges } from '@/lib/network'
 import { toast } from '@/lib/toast'
 import type { Site } from '@/types/api'
 
@@ -34,7 +36,10 @@ export function SiteDialog({
   const [city, setCity] = useState(site?.city ?? '')
   const [country, setCountry] = useState(site?.country ?? '')
   const [timezone, setTimezone] = useState(site?.timezone ?? '')
+  const [ipRanges, setIpRanges] = useState((site?.ipRanges ?? []).join('\n'))
   const [saving, setSaving] = useState(false)
+
+  const invalidRanges = parseIpRanges(ipRanges).filter((range) => !isCidr(range))
 
   async function submit(event: React.FormEvent) {
     event.preventDefault()
@@ -44,6 +49,7 @@ export function SiteDialog({
       city: city.trim() || null,
       country: country.trim() || null,
       timezone: timezone.trim() || null,
+      ipRanges: parseIpRanges(ipRanges),
     }
     try {
       const saved = site ? await api.sites.update(site.id, input) : await api.sites.create(input)
@@ -96,11 +102,31 @@ export function SiteDialog({
             <Label htmlFor="site-timezone">{dict.sites.timezone}</Label>
             <TimezonePicker id="site-timezone" value={timezone} onChange={setTimezone} />
           </div>
+          <div className="space-y-2">
+            <Label htmlFor="site-ip-ranges">{dict.aracast.ranges.label}</Label>
+            <Textarea
+              id="site-ip-ranges"
+              rows={3}
+              spellCheck={false}
+              className="font-mono"
+              aria-invalid={invalidRanges.length > 0}
+              placeholder={dict.aracast.ranges.placeholder}
+              value={ipRanges}
+              onChange={(event) => setIpRanges(event.target.value)}
+            />
+            {invalidRanges.length > 0 ? (
+              <p className="text-destructive text-xs">
+                {dict.aracast.ranges.invalid.replace('{ranges}', invalidRanges.join(', '))}
+              </p>
+            ) : (
+              <p className="text-muted-foreground text-xs">{dict.aracast.ranges.hint}</p>
+            )}
+          </div>
           <DialogFooter>
             <Button type="button" variant="outline" onClick={onClose}>
               {dict.common.cancel}
             </Button>
-            <Button type="submit" disabled={!name.trim() || saving}>
+            <Button type="submit" disabled={!name.trim() || invalidRanges.length > 0 || saving}>
               {saving ? <IconLoader2 className="animate-spin" /> : null}
               {dict.common.save}
             </Button>

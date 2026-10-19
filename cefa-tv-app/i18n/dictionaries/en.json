@@ -1193,5 +1193,137 @@
     },
     "preview": "Preview of the {logo} logo",
     "groupHint": "Applies to the group's players that do not have their own logo."
+  },
+  "aracast": {
+    "badge": "Aracast",
+    "errors": {
+      "ARACAST_UNREACHABLE": "The Aracast is not responding. Check the address and make sure it is powered on and connected to the network.",
+      "ARACAST_INVALID_RESPONSE": "The device responds, but it does not look like an Aracast.",
+      "ARACAST_EXISTS": "That Aracast is already registered.",
+      "ARACAST_SSH_AUTH_FAILED": "The Aracast rejected the SSH password.",
+      "ARACAST_SSH_ERROR": "Could not establish the SSH connection with the Aracast.",
+      "SITE_WITHOUT_RANGES": "This site has no network ranges. Edit it and add at least one."
+    },
+    "fields": {
+      "model": "Model",
+      "version": "Version",
+      "mac": "MAC address",
+      "currentTemplate": "Template on air",
+      "uptime": "Uptime",
+      "disk": "Disk",
+      "diskFree": "{free} free of {total}"
+    },
+    "add": {
+      "kindCefaTv": "CEFA TV player",
+      "kindAracast": "Aracast",
+      "description": "Register an Aracast box by entering its network address.",
+      "host": "IP address or name",
+      "hostPlaceholder": "192.168.1.50",
+      "probe": "Check",
+      "probeOk": "Aracast found",
+      "probeFailed": "Could not check the Aracast.",
+      "name": "Screen name (optional)",
+      "namePlaceholder": "Reception, 2nd floor...",
+      "scopeRequiredHint": "Choose a group or a site you can operate on.",
+      "sshPassword": "SSH password (optional)",
+      "sshPasswordHint": "If you leave it empty, the server password is used.",
+      "submit": "Add",
+      "success": "Aracast added.",
+      "failed": "Could not add the Aracast."
+    },
+    "hardware": {
+      "title": "Aracast device",
+      "empty": "There is no device data yet."
+    },
+    "settings": {
+      "title": "Aracast settings"
+    },
+    "connection": {
+      "title": "Connection and passwords",
+      "description": "Device details and the passwords CEFA TV uses to access it.",
+      "host": "Address",
+      "sshPassword": "SSH password",
+      "ftpPassword": "FTP password",
+      "own": "Own",
+      "global": "Server global",
+      "keepPlaceholder": "Leave empty to keep it unchanged",
+      "globalPlaceholder": "Type one to use its own",
+      "clear": "Delete the own password and go back to the global one",
+      "save": "Save passwords",
+      "saved": "Passwords updated.",
+      "saveFailed": "Could not update the passwords.",
+      "loadFailed": "Could not load the connection details."
+    },
+    "clock": {
+      "title": "Clock",
+      "description": "Device time and synchronization.",
+      "playerTime": "Device time",
+      "timezone": "Time zone",
+      "offset": "Offset from the server",
+      "offsetFormat": "{seconds} s",
+      "ntpServer": "NTP server (optional)",
+      "ntpServerPlaceholder": "pool.ntp.org",
+      "syncServer": "Sync with the server",
+      "syncNtp": "Sync with NTP",
+      "synced": "Clock synchronized.",
+      "syncFailed": "Could not synchronize the clock.",
+      "loadFailed": "Could not read the device clock."
+    },
+    "network": {
+      "title": "Network",
+      "description": "Network configuration of the device. Only administrators can see it.",
+      "configured": "Configured",
+      "effective": "Active",
+      "fields": {
+        "type": "Type",
+        "hostname": "Device name",
+        "ip": "IP address",
+        "netmask": "Netmask",
+        "gateway": "Gateway",
+        "dnsPrimary": "Primary DNS",
+        "dnsSecondary": "Secondary DNS"
+      },
+      "types": {
+        "static": "Static IP",
+        "dhcp": "DHCP"
+      },
+      "invalidHostname": "Use only letters, numbers and hyphens.",
+      "invalidIp": "Enter a valid IPv4 address, for example 192.168.1.50.",
+      "reboot": "Reboot the device when saving",
+      "rebootHint": "Some changes only apply after a reboot.",
+      "rebootRequired": "Changing the IP, netmask or gateway requires a reboot.",
+      "offline": "The device is offline: the network cannot be changed right now.",
+      "save": "Save network",
+      "saved": "Network configuration sent.",
+      "saveFailed": "Could not save the network configuration.",
+      "loadFailed": "Could not read the network configuration.",
+      "ipChanged": "The new address of the device is {host}.",
+      "rebooting": "The device is rebooting and will take a moment to come back.",
+      "confirmTitle": "Change the network configuration",
+      "confirmDescription": "You are about to change the IP, netmask or gateway and the device will reboot. If you get it wrong, it may become unreachable from CEFA TV until someone fixes it on site. The new IP will be {ip}.",
+      "confirmAction": "Change and reboot"
+    },
+    "ranges": {
+      "label": "Network ranges",
+      "placeholder": "10.21.34.0/23",
+      "hint": "One CIDR range per line. They are used to look for Aracast devices at the site.",
+      "invalid": "Invalid format: {ranges}. Use the format 10.21.34.0/23."
+    },
+    "discovery": {
+      "button": "Find Aracast",
+      "title": "Aracast at {name}",
+      "description": "Search for Aracast devices in the network ranges of the site.",
+      "scanning": "Searching the site network...",
+      "failed": "The search could not be completed.",
+      "summary": "{scanned} addresses scanned in {seconds} s.",
+      "noneFound": "No Aracast was found in the ranges of the site.",
+      "registered": "Already registered",
+      "open": "Open",
+      "added": "Aracast added to the site.",
+      "sshPassword": "SSH password for the ones you add (optional)",
+      "offlineTitle": "Registered but not responding",
+      "offlineHint": "These Aracast devices are already registered at the site but did not respond to the search.",
+      "rescan": "Search again"
+    }
   }
 }
