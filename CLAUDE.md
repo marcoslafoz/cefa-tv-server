@@ -36,7 +36,8 @@ Todo lo dirigido a la IA vive en `docs/llm/`, organizado en cuatro carpetas:
 - `docs/llm/workflows/` — procesos paso a paso que debe seguir la IA:
   - [`commits.md`](docs/llm/workflows/commits.md) — cómo ejecutar un commit.
 - `docs/llm/context/` — contexto adicional para la IA sobre la aplicación.
-- `docs/llm/tasks/` — planes de implementación de tareas concretas (se añaden aquí según surjan, y cada uno se enlaza desde este fichero).
+- `docs/llm/tasks/` — planes de implementación de tareas concretas (se añaden aquí según surjan, y cada uno se enlaza desde este fichero):
+  - [`aracast.md`](docs/llm/tasks/aracast.md) — integrar los players Aracast (Channel 6) como un tipo más de reproductor de CEFA TV.
 
 # Desarrollo local y Makefiles
 

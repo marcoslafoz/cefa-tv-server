@@ -4,7 +4,7 @@ Emisor de CEFA TV, el sistema de señalización digital de CEFA. Permite subir i
 
 ## Estructura del repositorio
 
-- `cefa-tv-core/` — API backend (Spring Boot 3.4, Java 21, PostgreSQL, Garage). Incluye el sidecar de descubrimiento en red local.
+- `cefa-tv-core/` — API backend (Spring Boot 3.4, Java 21, PostgreSQL, Garage). Incluye el sidecar de descubrimiento en red local y la gestión de los players Aracast, que se programan igual que un reproductor de CEFA TV.
 - `cefa-tv-app/` — interfaz web (Next.js 16, React 19, pnpm, Tailwind CSS).
 - `docs/llm/` — contexto y reglas para trabajar en el proyecto, incluida la [arquitectura y el contrato con los reproductores](docs/llm/context/architecture.md).
 

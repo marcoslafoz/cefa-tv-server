@@ -15,6 +15,7 @@ Administradores y equipos de contenido que programan qué se muestra en cada pan
 ## Qué resuelve
 
 - Biblioteca de medios con carpetas y almacenamiento en Garage (S3).
+- Gestión unificada de dos tipos de pantalla: los reproductores de CEFA TV y los players Aracast de Aranova, que se dan de alta, se programan, se ven y se controlan de la misma manera.
 - Timeline visual con arrastrar y soltar para crear playlists y programar su emisión por pantalla, grupo, días y franjas horarias.
 - Entrega diferida: si una pantalla está sin conexión, recibe la programación al volver.
 - Emparejamiento de reproductores con un código que se muestra en pantalla y descubrimiento automático en la red.
