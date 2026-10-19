@@ -14,9 +14,9 @@ Nunca escribas aquí contraseñas, tokens, claves privadas ni cualquier otro sec
 
 | Elemento | Enlace |
 |---|---|
-| Carpeta del proyecto (`CEFA Informática / Projects / CEFA TV Server`) | Pendiente de definir |
-| Kanban | Pendiente de definir |
-| Documentación | Pendiente de definir |
+| Carpeta del proyecto (`CEFA Informática / Projects / CEFA TV Server`; cubre el servidor, el reproductor y la integración con Aracast) | https://app.notion.com/p/3fea765c61d981f09db5f8faad8c2c86 |
+| Kanban | https://app.notion.com/p/cb4fa3bdd65a4e8d8763ffc9725d0a04 |
+| Documentación (incluye el manual de usuario) | https://app.notion.com/p/3fea765c61d9815e9ab3c6f4b33595ba |
 
 ## Servidores
 
