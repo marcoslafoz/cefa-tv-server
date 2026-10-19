@@ -23,6 +23,8 @@ import java.util.UUID;
  * @param url dirección (web)
  * @param refreshSec segundos entre recargas (web)
  * @param status estado de procesado
+ * @param progress avance de la compresión, de 0 a 100, mientras el medio está en proceso; {@code
+ *     null} en caso contrario
  * @param thumbnailUrl ruta de la miniatura o {@code null}
  * @param contentUrl ruta del contenido o {@code null}
  * @param createdAt fecha de creación
@@ -44,6 +46,7 @@ public record MediaResponse(
     String url,
     Integer refreshSec,
     MediaStatus status,
+    Integer progress,
     String thumbnailUrl,
     String contentUrl,
     Instant createdAt,

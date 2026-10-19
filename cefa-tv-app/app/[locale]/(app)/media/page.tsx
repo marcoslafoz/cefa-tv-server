@@ -96,7 +96,7 @@ function MediaPageContent() {
   useEffect(() => {
     const processing = page?.content.some((asset) => asset.status === 'PROCESSING')
     if (!processing) return
-    const timer = window.setInterval(() => void load(), 3000)
+    const timer = window.setInterval(() => void load(), 2000)
     return () => window.clearInterval(timer)
   }, [page, load])
 
@@ -304,9 +304,20 @@ function MediaPageContent() {
                 {asset.status !== 'READY' ? (
                   <div className="absolute inset-0 flex items-center justify-center bg-black/50 text-xs font-medium text-white">
                     {asset.status === 'PROCESSING' ? (
-                      <span className="flex items-center gap-1.5">
-                        <IconLoader2 className="size-4 animate-spin" />
-                        {dict.media.processing}
+                      <span className="flex w-3/4 flex-col items-center gap-1.5">
+                        <span className="flex items-center gap-1.5">
+                          <IconLoader2 className="size-4 animate-spin" />
+                          {dict.media.processing}
+                          {typeof asset.progress === 'number' ? ` ${asset.progress}%` : ''}
+                        </span>
+                        {typeof asset.progress === 'number' ? (
+                          <span className="h-1 w-full overflow-hidden rounded-full bg-white/30">
+                            <span
+                              className="block h-full rounded-full bg-white transition-all"
+                              style={{ width: `${asset.progress}%` }}
+                            />
+                          </span>
+                        ) : null}
                       </span>
                     ) : (
                       dict.media.failed

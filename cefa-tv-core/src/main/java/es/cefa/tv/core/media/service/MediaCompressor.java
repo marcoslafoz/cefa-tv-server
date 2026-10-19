@@ -5,6 +5,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Locale;
 import java.util.Optional;
+import java.util.function.IntConsumer;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -47,9 +48,10 @@ public class MediaCompressor {
    *
    * @param input vídeo original
    * @param workDir directorio de trabajo
+   * @param onProgress recibe el avance, de 0 a 100
    * @return el vídeo comprimido, o vacío si falla o no se reduce
    */
-  public Optional<Path> compressVideo(Path input, Path workDir) {
+  public Optional<Path> compressVideo(Path input, Path workDir, IntConsumer onProgress) {
     if (!settings.enabled()) {
       return Optional.empty();
     }
@@ -63,7 +65,8 @@ public class MediaCompressor {
             settings.videoCrf(),
             settings.videoPreset(),
             settings.audioBitrate(),
-            settings.videoTimeoutMinutes());
+            settings.videoTimeoutMinutes(),
+            onProgress);
     return accept(input, output, done);
   }
 

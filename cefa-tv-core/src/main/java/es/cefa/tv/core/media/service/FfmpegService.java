@@ -3,7 +3,9 @@ package es.cefa.tv.core.media.service;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import es.cefa.tv.core.shared.config.CoreProperties;
+import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -11,6 +13,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
+import java.util.function.IntConsumer;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -143,7 +146,7 @@ public class FfmpegService {
       command.addAll(List.of("-q:v", String.valueOf(quality), "-pix_fmt", "yuvj420p"));
     }
     command.add(output.toString());
-    return runCompression(command, output, TIMEOUT_SECONDS);
+    return runCompression(command, output, TIMEOUT_SECONDS, null, 0);
   }
 
   /**
@@ -158,6 +161,7 @@ public class FfmpegService {
    * @param preset velocidad de x264
    * @param audioBitrate tasa de bits del audio, por ejemplo {@code 128k}
    * @param timeoutMinutes tiempo máximo
+   * @param onProgress recibe el avance, de 0 a 100, mientras se comprime
    * @return {@code true} si se generó la salida
    */
   public boolean compressVideo(
@@ -168,7 +172,9 @@ public class FfmpegService {
       int crf,
       String preset,
       String audioBitrate,
-      int timeoutMinutes) {
+      int timeoutMinutes,
+      IntConsumer onProgress) {
+    long durationMs = probe(input).map(ProbeResult::durationMs).orElse(0L);
     List<String> command =
         List.of(
             properties.media().ffmpegPath(),
@@ -198,8 +204,11 @@ public class FfmpegService {
             audioBitrate,
             "-movflags",
             "+faststart",
+            "-progress",
+            "pipe:1",
+            "-nostats",
             output.toString());
-    return runCompression(command, output, timeoutMinutes * 60);
+    return runCompression(command, output, timeoutMinutes * 60, onProgress, durationMs);
   }
 
   /** Filtro que reduce al máximo indicado manteniendo la proporción y sin ampliar nunca. */
@@ -213,14 +222,24 @@ public class FfmpegService {
   }
 
   /** Ejecuta una compresión y devuelve si dejó un fichero de salida con contenido. */
-  private boolean runCompression(List<String> command, Path output, int timeoutSeconds) {
+  private boolean runCompression(
+      List<String> command,
+      Path output,
+      int timeoutSeconds,
+      IntConsumer onProgress,
+      long durationMs) {
     Path log = output.resolveSibling(output.getFileName() + ".log");
     try {
-      Process process =
-          new ProcessBuilder(command)
-              .redirectErrorStream(true)
-              .redirectOutput(log.toFile())
-              .start();
+      ProcessBuilder builder = new ProcessBuilder(command);
+      if (onProgress == null) {
+        builder.redirectErrorStream(true).redirectOutput(log.toFile());
+      } else {
+        builder.redirectError(log.toFile());
+      }
+      Process process = builder.start();
+      if (onProgress != null) {
+        Thread.ofVirtual().start(() -> readProgress(process, onProgress, durationMs));
+      }
       if (!process.waitFor(timeoutSeconds, TimeUnit.SECONDS)) {
         process.destroyForcibly();
         log.toFile().delete();
@@ -247,6 +266,27 @@ public class FfmpegService {
       return false;
     } finally {
       log.toFile().delete();
+    }
+  }
+
+  /** Lee el avance que ffmpeg escribe en su salida estándar y lo traduce a un porcentaje. */
+  private static void readProgress(Process process, IntConsumer onProgress, long durationMs) {
+    try (BufferedReader reader =
+        new BufferedReader(
+            new InputStreamReader(process.getInputStream(), StandardCharsets.UTF_8))) {
+      String line;
+      while ((line = reader.readLine()) != null) {
+        if (durationMs > 0 && line.startsWith("out_time_us=")) {
+          try {
+            long micros = Long.parseLong(line.substring("out_time_us=".length()).trim());
+            onProgress.accept((int) Math.max(0, Math.min(99, micros / 10 / durationMs)));
+          } catch (NumberFormatException ignored) {
+            // línea sin tiempo todavía ("N/A")
+          }
+        }
+      }
+    } catch (IOException ignored) {
+      // el proceso terminó o se canceló
     }
   }
 

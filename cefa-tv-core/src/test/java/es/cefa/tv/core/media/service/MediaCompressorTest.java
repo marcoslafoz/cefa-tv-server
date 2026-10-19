@@ -92,20 +92,20 @@ class MediaCompressorTest {
   @Test
   void doesNothingWhenDisabled() throws IOException {
     assertThat(compressor(false).compressImage(file("in", 1000), "foto.jpg", dir)).isEmpty();
-    assertThat(compressor(false).compressVideo(file("v", 1000), dir)).isEmpty();
+    assertThat(compressor(false).compressVideo(file("v", 1000), dir, p -> {})).isEmpty();
   }
 
   @Test
   void replacesVideoWhenItShrinks() throws IOException {
     when(ffmpeg.compressVideo(
-            any(), any(), anyInt(), anyInt(), anyInt(), anyString(), anyString(), anyInt()))
+            any(), any(), anyInt(), anyInt(), anyInt(), anyString(), anyString(), anyInt(), any()))
         .thenAnswer(
             call -> {
               Files.write(call.getArgument(1), new byte[400]);
               return true;
             });
 
-    var result = compressor(true).compressVideo(file("v", 1000), dir);
+    var result = compressor(true).compressVideo(file("v", 1000), dir, p -> {});
 
     assertThat(result.orElseThrow().getFileName().toString()).isEqualTo("compressed.mp4");
   }

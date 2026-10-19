@@ -3,6 +3,7 @@ package es.cefa.tv.core.media.service;
 import es.cefa.tv.core.folder.dto.FolderRef;
 import es.cefa.tv.core.media.dto.MediaResponse;
 import es.cefa.tv.core.media.model.MediaAsset;
+import es.cefa.tv.core.media.model.MediaStatus;
 import java.util.List;
 
 /** Conversión de medios a su representación de API. */
@@ -44,6 +45,7 @@ public final class MediaMapper {
         asset.getUrl(),
         asset.getRefreshSec(),
         asset.getStatus(),
+        asset.getStatus() == MediaStatus.PROCESSING ? MediaProgress.get(asset.getId()) : null,
         asset.getThumbnailKey() == null ? null : base + "/thumbnail",
         asset.getObjectKey() == null ? null : base + "/content",
         asset.getCreatedAt(),

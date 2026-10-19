@@ -146,6 +146,7 @@ export interface MediaAsset {
   mime: string | null
   sizeBytes: number
   status: MediaStatus
+  progress?: number | null
   durationMs: number | null
   width: number | null
   height: number | null

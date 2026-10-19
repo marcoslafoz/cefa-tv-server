@@ -72,8 +72,13 @@ public class MediaCompressionService {
   }
 
   void run(MediaCompressionRequested request) {
+    MediaProgress.set(request.assetId(), 0);
     try {
-      var compressed = compressor.compressVideo(request.original(), request.workDir());
+      var compressed =
+          compressor.compressVideo(
+              request.original(),
+              request.workDir(),
+              percent -> MediaProgress.set(request.assetId(), percent));
       if (compressed.isPresent()) {
         replace(request.assetId(), compressed.get());
       } else {
@@ -84,6 +89,7 @@ public class MediaCompressionService {
       log.warn("No se pudo comprimir el vídeo {}: {}", request.assetId(), e.getMessage());
       markReady(request.assetId());
     } finally {
+      MediaProgress.clear(request.assetId());
       deleteRecursively(request.workDir());
       events.publishEvent(new ContentChangedEvent("media-compressed"));
     }
