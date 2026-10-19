@@ -58,7 +58,6 @@ public class AracastPublisher {
   private static final String LOCK_FILE = "lock";
   private static final String EVENTS_FILE = "events.ics";
   private static final String SCHEDULE_NAME = "CEFA TV";
-  private static final String DEFAULT_TEMPLATE = AracastPlanner.DEFAULT_TEMPLATE;
   private static final LocalDateTime FIXED_ZIP_TIME = LocalDateTime.of(2000, 1, 1, 0, 0);
 
   private final AracastCommandClient commands;
@@ -86,8 +85,9 @@ public class AracastPublisher {
     try {
       Map<String, PlayerTemplate> installed = new LinkedHashMap<>();
       query.getTemplates(host).forEach(t -> installed.put(t.name(), t));
+      String currentDefault = defaultTemplateOf(host);
       Map<String, String> fileNames = new LinkedHashMap<>();
-      for (PlannedTemplate template : plan.templates()) {
+      for (PlannedTemplate template : plan.allTemplates()) {
         for (PlannedContent content : template.contents()) {
           if (template.kind() != TemplateKind.HTML) {
             fileNames.computeIfAbsent(content.sha256(), sha -> contents.playerName(content, work));
@@ -96,10 +96,11 @@ public class AracastPublisher {
       }
       Map<String, Path> missing = missingContents(host, plan, fileNames, work);
       Map<PlannedTemplate, Prepared> toInstall = new LinkedHashMap<>();
-      for (PlannedTemplate template : plan.templates()) {
+      for (PlannedTemplate template : plan.allTemplates()) {
         Prepared prepared = prepare(template, fileNames, work);
         PlayerTemplate current = installed.get(template.name());
-        if (current == null || !prepared.sha1().equalsIgnoreCase(current.hash())) {
+        boolean notDefault = template == plan.idle() && !template.name().equals(currentDefault);
+        if (current == null || !prepared.sha1().equalsIgnoreCase(current.hash()) || notDefault) {
           toInstall.put(template, prepared);
         }
       }
@@ -114,7 +115,7 @@ public class AracastPublisher {
               }
             }
             for (var entry : toInstall.entrySet()) {
-              install(host, entry.getKey(), entry.getValue(), work);
+              install(host, entry.getKey(), entry.getValue(), entry.getKey() == plan.idle());
             }
             ftp.upload(host, EVENTS_FILE, stream(events.getBytes(StandardCharsets.UTF_8)));
             commands.send(host, "Player.loadEvents");
@@ -152,7 +153,7 @@ public class AracastPublisher {
     Set<String> present = new HashSet<>();
     existing.fieldNames().forEachRemaining(present::add);
     Map<String, PlannedContent> bySha = new LinkedHashMap<>();
-    plan.templates().forEach(t -> t.contents().forEach(c -> bySha.putIfAbsent(c.sha256(), c)));
+    plan.allTemplates().forEach(t -> t.contents().forEach(c -> bySha.putIfAbsent(c.sha256(), c)));
     fileNames.forEach(
         (sha, name) -> {
           if (!present.contains(name)) {
@@ -182,7 +183,8 @@ public class AracastPublisher {
     return new Prepared(zip, sha1(zip), webName);
   }
 
-  private void install(String host, PlannedTemplate template, Prepared prepared, Path work) {
+  private void install(
+      String host, PlannedTemplate template, Prepared prepared, boolean makeDefault) {
     if (prepared.webName() != null) {
       byte[] html = contents.read(template.contents().get(0).sha256());
       byte[] webZip = zipOf("index.html", html);
@@ -192,7 +194,7 @@ public class AracastPublisher {
     }
     String zipName = template.name() + ".zip";
     ftp.upload(host, zipName, stream(prepared.zip()));
-    commands.send(host, "Template.uploadTemplate", Map.of("file", zipName, "default", false));
+    commands.send(host, "Template.uploadTemplate", Map.of("file", zipName, "default", makeDefault));
   }
 
   /**
@@ -214,9 +216,17 @@ public class AracastPublisher {
     }
   }
 
+  private String defaultTemplateOf(String host) {
+    try {
+      return query.getStatus(host).defaultTemplate();
+    } catch (AracastException e) {
+      return null;
+    }
+  }
+
   private int removeStale(String host, AracastPlan plan, Map<String, PlayerTemplate> installed) {
     Set<String> wanted = new HashSet<>();
-    plan.templates().forEach(t -> wanted.add(t.name()));
+    plan.allTemplates().forEach(t -> wanted.add(t.name()));
     int removed = 0;
     for (PlayerTemplate template : installed.values()) {
       if (AracastTemplateNames.isManaged(template.name()) && !wanted.contains(template.name())) {
@@ -238,7 +248,7 @@ public class AracastPublisher {
           SCHEDULE_NAME,
           List.of(
               new IcsEntry(
-                  DEFAULT_TEMPLATE, LocalTime.MIDNIGHT, LocalTime.of(23, 59, 30), List.of())),
+                  plan.idle().name(), LocalTime.MIDNIGHT, LocalTime.of(23, 59, 30), List.of())),
           0);
     }
     List<IcsEntry> entries =
@@ -246,7 +256,11 @@ public class AracastPublisher {
             .map(
                 (PlannedEvent e) ->
                     new IcsEntry(
-                        e.template(), e.start(), e.end(), e.days().stream().sorted().toList()))
+                        e.template(),
+                        e.start(),
+                        e.end(),
+                        e.days().stream().sorted().toList(),
+                        e.date()))
             .toList();
     return new IcsSchedule(SCHEDULE_NAME, entries, 0);
   }

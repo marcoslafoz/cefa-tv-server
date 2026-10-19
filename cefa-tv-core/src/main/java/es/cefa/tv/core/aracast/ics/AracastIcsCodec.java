@@ -76,8 +76,9 @@ public class AracastIcsCodec {
       long durationMs = Duration.between(entry.start(), entry.end()).toMillis();
       line(sb, "BEGIN:VEVENT");
       line(sb, "DTSTAMP:" + stamp);
-      line(sb, "DTSTART:" + LOCAL.format(LocalDateTime.of(ANCHOR_DATE, entry.start())));
-      line(sb, "DTEND:" + LOCAL.format(LocalDateTime.of(ANCHOR_DATE, entry.end())));
+      LocalDate day = entry.date() == null ? ANCHOR_DATE : entry.date();
+      line(sb, "DTSTART:" + LOCAL.format(LocalDateTime.of(day, entry.start())));
+      line(sb, "DTEND:" + LOCAL.format(LocalDateTime.of(day, entry.end())));
       line(sb, "SUMMARY:" + escapeText(entry.template()));
       line(sb, "RRULE:" + rrule(entry));
       line(sb, "UID:" + UUID.randomUUID());
@@ -195,6 +196,9 @@ public class AracastIcsCodec {
   }
 
   private static String rrule(IcsEntry entry) {
+    if (entry.date() != null) {
+      return "FREQ=DAILY;COUNT=1";
+    }
     if (entry.everyDay()) {
       return "FREQ=DAILY";
     }

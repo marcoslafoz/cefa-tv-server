@@ -10,6 +10,7 @@ import es.cefa.tv.core.manifest.model.ManifestDocument.ItemEntry;
 import es.cefa.tv.core.manifest.model.ManifestDocument.PageEntry;
 import es.cefa.tv.core.manifest.model.ManifestDocument.PlaylistEntry;
 import es.cefa.tv.core.manifest.model.ManifestDocument.ScheduleEntry;
+import es.cefa.tv.core.player.model.IdleLogo;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.LocalTime;
@@ -23,6 +24,7 @@ import org.junit.jupiter.api.Test;
 class AracastPlannerTest {
 
   private static final LocalDate MONDAY = LocalDate.of(2026, 10, 19);
+  private static final java.time.LocalDateTime NOW = MONDAY.atTime(8, 0);
   private static final String P1 = "11111111-1111-1111-1111-111111111111";
   private static final String P2 = "22222222-2222-2222-2222-222222222222";
   private static final String P3 = "33333333-3333-3333-3333-333333333333";
@@ -103,7 +105,8 @@ class AracastPlannerTest {
             assets,
             playlists,
             schedules),
-        MONDAY);
+        NOW,
+        IdleLogo.CEFA);
   }
 
   private static PlannedEvent event(PlannedEventSpec spec, AracastPlan plan) {
@@ -253,7 +256,7 @@ class AracastPlannerTest {
   }
 
   @Test
-  void aMixedPlaylistBecomesACycleOfTemplatesRepeatedInTheWindow() {
+  void aMixedPlaylistBecomesACycleOfDatedEventsForTheNextHours() {
     image("a");
     video("v", 20_000);
     web("w", "https://hermes.cefa.es/");
@@ -262,12 +265,14 @@ class AracastPlannerTest {
 
     AracastPlan plan = plan();
 
+    assertThat(plan.rolling()).isTrue();
     assertThat(plan.templates())
         .extracting(PlannedTemplate::name, PlannedTemplate::kind)
         .containsExactly(
             org.assertj.core.groups.Tuple.tuple("Mixta 1 ~ctv-11111111-1", TemplateKind.IMAGE),
             org.assertj.core.groups.Tuple.tuple("Mixta 2 ~ctv-11111111-2", TemplateKind.VIDEOS),
             org.assertj.core.groups.Tuple.tuple("Mixta 3 ~ctv-11111111-3", TemplateKind.WEB));
+    assertThat(plan.events()).allMatch(e -> e.date().equals(MONDAY) && e.days().isEmpty());
     assertThat(plan.events())
         .extracting(PlannedEvent::start, PlannedEvent::end)
         .startsWith(
@@ -279,23 +284,85 @@ class AracastPlannerTest {
   }
 
   @Test
-  void imagesWithDifferentDurationsKeepTheirExactTimesAsACycle() {
+  void aCycleOnlyCoversTheWindowNotTheWholeDay() {
     image("a");
-    image("b");
-    playlist(P1, "Tiempos", item("a", 5), item("b", 15));
-    schedule(P1, 10, null, null, "10:00", "10:01", List.of(1), false);
+    web("w", "https://hermes.cefa.es/");
+    playlist(P1, "Todo el dia", item("a", 10), item("w", 20));
+    schedule(P1, 10, null, null, null, null, List.of(), true);
 
     AracastPlan plan = plan();
 
-    assertThat(plan.events())
-        .extracting(PlannedEvent::start, PlannedEvent::end)
-        .containsExactly(
-            org.assertj.core.groups.Tuple.tuple(LocalTime.of(10, 0, 0), LocalTime.of(10, 0, 5)),
-            org.assertj.core.groups.Tuple.tuple(LocalTime.of(10, 0, 5), LocalTime.of(10, 0, 20)),
-            org.assertj.core.groups.Tuple.tuple(LocalTime.of(10, 0, 20), LocalTime.of(10, 0, 25)),
-            org.assertj.core.groups.Tuple.tuple(LocalTime.of(10, 0, 25), LocalTime.of(10, 0, 40)),
-            org.assertj.core.groups.Tuple.tuple(LocalTime.of(10, 0, 40), LocalTime.of(10, 0, 45)),
-            org.assertj.core.groups.Tuple.tuple(LocalTime.of(10, 0, 45), LocalTime.of(10, 1, 0)));
+    assertThat(plan.events()).hasSize(2 * (AracastPlanner.ROLLING_MINUTES * 60 / 30));
+    PlannedEvent last = plan.events().get(plan.events().size() - 1);
+    assertThat(last.end()).isEqualTo(LocalTime.of(11, 0));
+  }
+
+  @Test
+  void aFastCycleShrinksTheWindowInsteadOfFailing() {
+    web("w1", "https://a.example/");
+    web("w2", "https://b.example/");
+    web("w3", "https://c.example/");
+    playlist(P1, "Rapida", item("w1", 1), item("w2", 1), item("w3", 1));
+    schedule(P1, 10, null, null, null, null, List.of(), true);
+
+    AracastPlan plan = plan();
+
+    assertThat(plan.events().size()).isLessThanOrEqualTo(AracastPlanner.MAX_EVENTS);
+    assertThat(plan.events().get(plan.events().size() - 1).end()).isAfter(LocalTime.of(8, 20));
+  }
+
+  @Test
+  void aCycleStartingLaterOnlyEmitsTheEventsInsideTheWindow() {
+    web("w1", "https://a.example/");
+    web("w2", "https://b.example/");
+    playlist(P1, "Tarde", item("w1", 30), item("w2", 30));
+    schedule(P1, 10, null, null, "15:00", "16:00", List.of(1), false);
+
+    assertThat(plan().events()).isEmpty();
+  }
+
+  @Test
+  void imagesWithDifferentDurationsShareOneSlideshowWithRepeatedSlides() {
+    image("a");
+    image("b");
+    playlist(P1, "Tiempos", item("a", 5), item("b", 15));
+    schedule(P1, 10, null, null, null, null, List.of(), true);
+
+    AracastPlan plan = plan();
+
+    assertThat(plan.rolling()).isFalse();
+    assertThat(plan.events()).hasSize(1);
+    PlannedTemplate template = plan.templates().get(0);
+    assertThat(template.kind()).isEqualTo(TemplateKind.SLIDESHOW);
+    assertThat(template.secondsPerSlide()).isEqualTo(5);
+    assertThat(template.contents())
+        .extracting(PlannedContent::sha256)
+        .containsExactly("sha-a", "sha-b", "sha-b", "sha-b");
+  }
+
+  @Test
+  void theIdleScreenFollowsTheChosenLogo() {
+    AracastPlan cefa = plan();
+    AracastPlan algontec =
+        AracastPlanner.plan(
+            new ManifestDocument(
+                1,
+                null,
+                UUID.randomUUID(),
+                "Europe/Madrid",
+                null,
+                files,
+                assets,
+                playlists,
+                schedules),
+            NOW,
+            IdleLogo.ALGONTEC);
+
+    assertThat(cefa.idle().name()).isEqualTo("Pantalla en reposo CEFA ~ctv-0000cefa");
+    assertThat(algontec.idle().name()).isEqualTo("Pantalla en reposo ALGONTEC ~ctv-0a190000");
+    assertThat(cefa.idle().contents().get(0).sha256()).startsWith(AracastPlanner.BUILTIN);
+    assertThat(cefa.allTemplates()).contains(cefa.idle());
+    assertThat(AracastTemplateNames.isManaged(algontec.idle().name())).isTrue();
   }
 
   @Test
@@ -307,18 +374,6 @@ class AracastPlannerTest {
         .isInstanceOf(UnsupportedPlaylistException.class)
         .hasMessageContaining("Vacía")
         .hasMessageContaining("no tiene elementos");
-  }
-
-  @Test
-  void rejectsAProgrammeThatWouldNeedTooManyEvents() {
-    image("a");
-    image("b");
-    playlist(P1, "Rápida", item("a", 1), item("b", 2));
-    schedule(P1, 10, null, null, null, null, List.of(), true);
-
-    assertThatThrownBy(this::plan)
-        .isInstanceOf(UnsupportedPlaylistException.class)
-        .hasMessageContaining("cambios de plantilla");
   }
 
   @Test
@@ -358,9 +413,7 @@ class AracastPlannerTest {
         .isEqualTo("Base ~ctv-11111111");
     assertThat(AracastPlanner.activeTemplate(plan, MONDAY.atTime(11, 0)))
         .isEqualTo("Aviso ~ctv-22222222");
-    assertThat(
-            AracastPlanner.activeTemplate(
-                new AracastPlan(List.of(), List.of()), MONDAY.atTime(9, 0)))
-        .isEqualTo("basic_json");
+    assertThat(AracastPlanner.activeTemplate(plan(), MONDAY.atTime(23, 59, 45)))
+        .isEqualTo(plan.idle().name());
   }
 }

@@ -1,6 +1,7 @@
 package es.cefa.tv.core.aracast.delivery;
 
 import es.cefa.tv.core.aracast.exception.AracastException;
+import es.cefa.tv.core.aracast.plan.AracastPlanner;
 import es.cefa.tv.core.aracast.plan.PlannedContent;
 import es.cefa.tv.core.aracast.template.MediaNaming;
 import es.cefa.tv.core.media.model.StoredFile;
@@ -55,6 +56,12 @@ public class AracastContentService {
    * @return el nombre en el player
    */
   public String playerName(PlannedContent content, Path workDir) {
+    if (isBuiltin(content)) {
+      byte[] bytes = builtin(content);
+      String name = MediaNaming.playerName(content.name(), sha1Of(bytes));
+      writeFile(workDir.resolve(name), bytes);
+      return name;
+    }
     StoredFile file = find(content.sha256());
     String original = withExtension(content.name(), content.mime());
     if (file.getSha1() != null) {
@@ -92,7 +99,9 @@ public class AracastContentService {
    */
   public Path fetch(PlannedContent content, String playerName, Path workDir) {
     Path target = workDir.resolve(playerName);
-    if (!Files.exists(target)) {
+    if (!Files.exists(target) && isBuiltin(content)) {
+      writeFile(target, builtin(content));
+    } else if (!Files.exists(target)) {
       download(find(content.sha256()), target);
     }
     return target;
@@ -109,6 +118,42 @@ public class AracastContentService {
       return in.readAllBytes();
     } catch (IOException e) {
       throw new AracastException("No se pudo leer el fichero " + sha256, e);
+    }
+  }
+
+  private static boolean isBuiltin(PlannedContent content) {
+    return content.sha256().startsWith(AracastPlanner.BUILTIN);
+  }
+
+  /**
+   * Lee un fichero que viene incluido en la aplicación, como la imagen de la pantalla en reposo.
+   */
+  private static byte[] builtin(PlannedContent content) {
+    String id = content.sha256().substring(AracastPlanner.BUILTIN.length());
+    try (InputStream in =
+        AracastContentService.class.getResourceAsStream("/aracast/" + id + ".png")) {
+      if (in == null) {
+        throw new AracastException("Falta el fichero incluido " + id);
+      }
+      return in.readAllBytes();
+    } catch (IOException e) {
+      throw new AracastException("No se pudo leer el fichero incluido " + id, e);
+    }
+  }
+
+  private static void writeFile(Path target, byte[] bytes) {
+    try {
+      Files.write(target, bytes);
+    } catch (IOException e) {
+      throw new AracastException("No se pudo preparar " + target.getFileName(), e);
+    }
+  }
+
+  private static String sha1Of(byte[] bytes) {
+    try {
+      return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-1").digest(bytes));
+    } catch (NoSuchAlgorithmException e) {
+      throw new IllegalStateException(e);
     }
   }
 

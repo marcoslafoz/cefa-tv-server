@@ -6,6 +6,7 @@ import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.mockingDetails;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -13,15 +14,21 @@ import static org.mockito.Mockito.when;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import es.cefa.tv.core.aracast.client.AracastCommandClient;
 import es.cefa.tv.core.aracast.client.AracastFtpClient;
+import es.cefa.tv.core.aracast.dto.PlayerStatus;
 import es.cefa.tv.core.aracast.dto.PlayerTemplate;
+import es.cefa.tv.core.aracast.exception.AracastException;
 import es.cefa.tv.core.aracast.ics.AracastIcsCodec;
+import es.cefa.tv.core.aracast.management.AracastLocks;
 import es.cefa.tv.core.aracast.plan.AracastPlan;
+import es.cefa.tv.core.aracast.plan.AracastPlanner;
 import es.cefa.tv.core.aracast.plan.PlannedContent;
 import es.cefa.tv.core.aracast.plan.PlannedEvent;
 import es.cefa.tv.core.aracast.plan.PlannedTemplate;
 import es.cefa.tv.core.aracast.plan.TemplateKind;
 import es.cefa.tv.core.aracast.service.AracastQueryService;
 import es.cefa.tv.core.aracast.template.TemplateBuilder;
+import es.cefa.tv.core.player.model.IdleLogo;
+import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -29,7 +36,10 @@ import java.security.MessageDigest;
 import java.time.DayOfWeek;
 import java.time.Instant;
 import java.time.LocalTime;
+import java.time.ZoneId;
+import java.util.ArrayList;
 import java.util.HexFormat;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -42,7 +52,7 @@ import org.mockito.InOrder;
 class AracastPublisherTest {
 
   private static final String HOST = "10.0.0.5";
-  private static final java.time.ZoneId ZONE = java.time.ZoneId.of("Europe/Madrid");
+  private static final ZoneId ZONE = ZoneId.of("Europe/Madrid");
   private static final PlannedTemplate IMAGE =
       new PlannedTemplate(
           "Oficinas ~ctv-11111111",
@@ -51,6 +61,7 @@ class AracastPublisherTest {
           10,
           null,
           true);
+  private static final PlannedTemplate IDLE = AracastPlanner.idleTemplate(IdleLogo.CEFA);
   private static final AracastPlan PLAN =
       new AracastPlan(
           List.of(IMAGE),
@@ -59,7 +70,10 @@ class AracastPublisherTest {
                   IMAGE.name(),
                   LocalTime.MIDNIGHT,
                   LocalTime.of(23, 59, 59),
-                  Set.of(DayOfWeek.values()))));
+                  Set.of(DayOfWeek.values()),
+                  null)),
+          IDLE,
+          false);
 
   @TempDir Path dir;
 
@@ -76,10 +90,17 @@ class AracastPublisherTest {
     query = mock(AracastQueryService.class);
     contents = mock(AracastContentService.class);
     ObjectMapper mapper = new ObjectMapper();
-    when(contents.playerName(any(), any())).thenReturn("logo_abc.png");
-    Path local = Files.writeString(dir.resolve("logo_abc.png"), "png");
-    when(contents.fetch(any(), eq("logo_abc.png"), any())).thenReturn(local);
-    when(query.getStatus(HOST)).thenReturn(status(""));
+    when(contents.playerName(any(), any()))
+        .thenAnswer(
+            call -> {
+              PlannedContent content = call.getArgument(0);
+              return content.sha256().startsWith(AracastPlanner.BUILTIN)
+                  ? "reposo_def.png"
+                  : "logo_abc.png";
+            });
+    when(contents.fetch(any(), any(), any()))
+        .thenAnswer(call -> Files.writeString(dir.resolve((String) call.getArgument(1)), "png"));
+    when(query.getStatus(HOST)).thenReturn(status("", "basic_json"));
     when(commands.send(eq(HOST), eq("Template.getContent"), anyMap()))
         .thenReturn(mapper.readTree("{\"result\":{\"files\":{}}}"));
     publisher =
@@ -90,11 +111,63 @@ class AracastPublisherTest {
             contents,
             new TemplateBuilder(mapper),
             new AracastIcsCodec(),
-            new es.cefa.tv.core.aracast.management.AracastLocks());
+            new AracastLocks());
+  }
+
+  private static PlayerStatus status(String currentTemplate, String defaultTemplate) {
+    return new PlayerStatus(
+        HOST,
+        "2.6.19",
+        "Dual",
+        "00:01",
+        HOST,
+        "1 day",
+        "1920x1080",
+        currentTemplate,
+        null,
+        null,
+        defaultTemplate,
+        1L,
+        1L,
+        "2026-10-19 10:00:00",
+        "Europe/Madrid",
+        0L);
+  }
+
+  private Map<String, byte[]> uploadedZips() {
+    Map<String, byte[]> zips = new LinkedHashMap<>();
+    for (var invocation : mockingDetails(ftp).getInvocations()) {
+      if (invocation.getMethod().getName().equals("upload")) {
+        String name = invocation.getArgument(1);
+        if (name.endsWith(".zip")) {
+          try {
+            zips.put(name, ((InputStream) invocation.getArgument(2)).readAllBytes());
+          } catch (IOException e) {
+            throw new IllegalStateException(e);
+          }
+        }
+      }
+    }
+    return zips;
+  }
+
+  private static String sha1(byte[] bytes) throws Exception {
+    return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-1").digest(bytes));
+  }
+
+  private List<PlayerTemplate> installedWithTheCurrentHashes() throws Exception {
+    List<PlayerTemplate> installed = new ArrayList<>();
+    for (var zip : uploadedZips().entrySet()) {
+      String name = zip.getKey().substring(0, zip.getKey().length() - 4);
+      installed.add(
+          new PlayerTemplate(
+              name, zip.getKey(), sha1(zip.getValue()), 1, Instant.now(), List.of(), null));
+    }
+    return installed;
   }
 
   @Test
-  void publishesContentsTemplateAndEventsInTheDesktopAppOrder() {
+  void publishesContentsTemplatesAndEventsInTheDesktopAppOrder() {
     when(query.getTemplates(HOST)).thenReturn(List.of());
 
     AracastPublisher.Result result = publisher.publish(HOST, PLAN, ZONE);
@@ -114,32 +187,53 @@ class AracastPublisherTest {
     order.verify(commands).send(HOST, "Player.loadEvents");
     order.verify(commands).send(HOST, "Player.updateEvents");
     order.verify(ftp).delete(HOST, "lock");
-    assertThat(result.templatesInstalled()).isEqualTo(1);
-    assertThat(result.contentsUploaded()).isEqualTo(1);
+    assertThat(result.templatesInstalled()).isEqualTo(2);
+    assertThat(result.contentsUploaded()).isEqualTo(2);
     assertThat(result.events()).isEqualTo(1);
   }
 
   @Test
-  void doesNotReinstallATemplateWhoseZipHasNotChanged() throws Exception {
+  void installsTheIdleScreenAsTheDefaultTemplate() {
+    when(query.getTemplates(HOST)).thenReturn(List.of());
+
+    publisher.publish(HOST, PLAN, ZONE);
+
+    verify(commands)
+        .send(
+            HOST, "Template.uploadTemplate", Map.of("file", IDLE.name() + ".zip", "default", true));
+  }
+
+  @Test
+  void doesNotReinstallTemplatesWhoseZipHasNotChangedAndKeepsTheDefault() throws Exception {
     when(query.getTemplates(HOST)).thenReturn(List.of());
     publisher.publish(HOST, PLAN, ZONE);
-    ArgumentCaptor<InputStream> zip = ArgumentCaptor.forClass(InputStream.class);
-    verify(ftp).upload(eq(HOST), eq("Oficinas ~ctv-11111111.zip"), zip.capture());
-    String hash =
-        HexFormat.of()
-            .formatHex(MessageDigest.getInstance("SHA-1").digest(zip.getValue().readAllBytes()));
-    ftpReset();
-    when(query.getTemplates(HOST))
-        .thenReturn(
-            List.of(
-                new PlayerTemplate(
-                    IMAGE.name(), IMAGE.name() + ".zip", hash, 1, Instant.now(), List.of(), null)));
+    List<PlayerTemplate> installed = installedWithTheCurrentHashes();
+    org.mockito.Mockito.clearInvocations(ftp, commands);
+    when(query.getTemplates(HOST)).thenReturn(installed);
+    when(query.getStatus(HOST)).thenReturn(status(IMAGE.name(), IDLE.name()));
 
     AracastPublisher.Result second = publisher.publish(HOST, PLAN, ZONE);
 
     assertThat(second.templatesInstalled()).isZero();
     verify(commands, never()).send(eq(HOST), eq("Template.uploadTemplate"), anyMap());
     verify(commands).send(HOST, "Player.updateEvents");
+  }
+
+  @Test
+  void reinstallsTheIdleTemplateWhenItIsNotTheDefault() throws Exception {
+    when(query.getTemplates(HOST)).thenReturn(List.of());
+    publisher.publish(HOST, PLAN, ZONE);
+    List<PlayerTemplate> installed = installedWithTheCurrentHashes();
+    org.mockito.Mockito.clearInvocations(ftp, commands);
+    when(query.getTemplates(HOST)).thenReturn(installed);
+    when(query.getStatus(HOST)).thenReturn(status(IMAGE.name(), "basic_json"));
+
+    AracastPublisher.Result second = publisher.publish(HOST, PLAN, ZONE);
+
+    assertThat(second.templatesInstalled()).isEqualTo(1);
+    verify(commands)
+        .send(
+            HOST, "Template.uploadTemplate", Map.of("file", IDLE.name() + ".zip", "default", true));
   }
 
   @Test
@@ -156,15 +250,34 @@ class AracastPublisherTest {
                     List.of(),
                     null),
                 new PlayerTemplate(
+                    "Otra ~ctv-88888888", "Otra ~ctv-88888888.zip", "h", 1, null, List.of(), null),
+                new PlayerTemplate(
                     "CEFA Oficinas", "CEFA Oficinas.zip", "h", 1, null, List.of(), null)));
 
     AracastPublisher.Result result = publisher.publish(HOST, PLAN, ZONE);
 
     verify(commands)
         .send(HOST, "Template.deleteTemplate", Map.of("file", "Vieja [ctv-99999999].zip"));
+    verify(commands)
+        .send(HOST, "Template.deleteTemplate", Map.of("file", "Otra ~ctv-88888888.zip"));
     verify(commands, never())
         .send(HOST, "Template.deleteTemplate", Map.of("file", "CEFA Oficinas.zip"));
-    assertThat(result.templatesRemoved()).isEqualTo(1);
+    assertThat(result.templatesRemoved()).isEqualTo(2);
+  }
+
+  @Test
+  void theOtherIdleTemplateIsRemovedWhenTheLogoChanges() {
+    PlannedTemplate algontec = AracastPlanner.idleTemplate(IdleLogo.ALGONTEC);
+    when(query.getTemplates(HOST))
+        .thenReturn(
+            List.of(
+                new PlayerTemplate(
+                    algontec.name(), algontec.name() + ".zip", "h", 1, null, List.of(), null)));
+
+    publisher.publish(HOST, PLAN, ZONE);
+
+    verify(commands)
+        .send(HOST, "Template.deleteTemplate", Map.of("file", algontec.name() + ".zip"));
   }
 
   @Test
@@ -180,51 +293,49 @@ class AracastPublisherTest {
     verify(ftp).delete(HOST, "lock");
   }
 
-  private void ftpReset() {
-    org.mockito.Mockito.clearInvocations(ftp, commands);
-  }
-
   @Test
-  void anEmptyPlanLeavesTheDefaultTemplateInsteadOfAnEmptyCalendar() {
+  void anEmptyPlanLeavesTheIdleScreenAllDayInsteadOfAnEmptyCalendar() {
     when(query.getTemplates(HOST)).thenReturn(List.of());
     ArgumentCaptor<InputStream> upload = ArgumentCaptor.forClass(InputStream.class);
 
-    publisher.publish(HOST, new AracastPlan(List.of(), List.of()), ZONE);
+    publisher.publish(HOST, new AracastPlan(List.of(), List.of(), IDLE, false), ZONE);
 
     verify(ftp).upload(eq(HOST), eq("events.ics"), upload.capture());
     try {
       assertThat(new String(upload.getValue().readAllBytes()))
-          .contains("X-ARACAST-CONTENT:basic_json")
+          .contains("X-ARACAST-CONTENT:" + IDLE.name())
           .contains("BEGIN:VEVENT");
-    } catch (java.io.IOException e) {
+    } catch (IOException e) {
       throw new IllegalStateException(e);
     }
   }
 
-  private static es.cefa.tv.core.aracast.dto.PlayerStatus status(String currentTemplate) {
-    return new es.cefa.tv.core.aracast.dto.PlayerStatus(
-        HOST,
-        "2.6.19",
-        "Dual",
-        "00:01",
-        HOST,
-        "1 day",
-        "1920x1080",
-        currentTemplate,
-        null,
-        null,
-        "basic_json",
-        1L,
-        1L,
-        "2026-10-19 10:00:00",
-        "Europe/Madrid",
-        0L);
+  @Test
+  void datedEventsAreWrittenWithTheirDateAndNoRepetition() throws Exception {
+    PlannedEvent dated =
+        new PlannedEvent(
+            IMAGE.name(),
+            LocalTime.of(8, 0),
+            LocalTime.of(8, 0, 10),
+            Set.of(),
+            java.time.LocalDate.of(2026, 10, 19));
+    AracastPlan plan = new AracastPlan(List.of(IMAGE), List.of(dated), IDLE, true);
+    when(query.getTemplates(HOST)).thenReturn(List.of());
+    ArgumentCaptor<InputStream> upload = ArgumentCaptor.forClass(InputStream.class);
+
+    publisher.publish(HOST, plan, ZONE);
+
+    verify(ftp).upload(eq(HOST), eq("events.ics"), upload.capture());
+    assertThat(new String(upload.getValue().readAllBytes()))
+        .contains("DTSTART:20261019T080000")
+        .contains("DTEND:20261019T080010")
+        .contains("RRULE:FREQ=DAILY;COUNT=1");
   }
 
   @Test
   void switchesToTheTemplateThatShouldBeOnAirRightAfterPublishing() {
     when(query.getTemplates(HOST)).thenReturn(List.of());
-    when(query.getStatus(HOST)).thenReturn(status("basic_json"));
+    when(query.getStatus(HOST)).thenReturn(status("basic_json", "basic_json"));
 
     publisher.publish(HOST, PLAN, ZONE);
 
@@ -236,7 +347,7 @@ class AracastPublisherTest {
   @Test
   void switchesAlsoWhenTheTemplateOnAirWasJustReplaced() {
     when(query.getTemplates(HOST)).thenReturn(List.of());
-    when(query.getStatus(HOST)).thenReturn(status(IMAGE.name()));
+    when(query.getStatus(HOST)).thenReturn(status(IMAGE.name(), "basic_json"));
 
     publisher.publish(HOST, PLAN, ZONE);
 
@@ -244,55 +355,13 @@ class AracastPublisherTest {
   }
 
   @Test
-  void doesNotSwitchWhenTheRightTemplateIsOnAirAndUnchanged() throws Exception {
-    when(query.getTemplates(HOST)).thenReturn(List.of());
-    publisher.publish(HOST, PLAN, ZONE);
-    ArgumentCaptor<InputStream> zip = ArgumentCaptor.forClass(InputStream.class);
-    verify(ftp).upload(eq(HOST), eq("Oficinas ~ctv-11111111.zip"), zip.capture());
-    String hash =
-        HexFormat.of()
-            .formatHex(MessageDigest.getInstance("SHA-1").digest(zip.getValue().readAllBytes()));
-    org.mockito.Mockito.clearInvocations(ftp, commands);
-    when(query.getTemplates(HOST))
-        .thenReturn(
-            List.of(
-                new PlayerTemplate(
-                    IMAGE.name(), IMAGE.name() + ".zip", hash, 1, Instant.now(), List.of(), null)));
-    when(query.getStatus(HOST)).thenReturn(status(IMAGE.name()));
-
-    publisher.publish(HOST, PLAN, ZONE);
-
-    verify(commands, never()).send(eq(HOST), eq("Template.changeTemplate"), anyMap());
-  }
-
-  @Test
   void aFailedImmediateSwitchDoesNotFailThePublication() {
     when(query.getTemplates(HOST)).thenReturn(List.of());
     when(commands.send(eq(HOST), eq("Template.changeTemplate"), anyMap()))
-        .thenThrow(new es.cefa.tv.core.aracast.exception.AracastException("rechazado"));
+        .thenThrow(new AracastException("rechazado"));
 
     AracastPublisher.Result result = publisher.publish(HOST, PLAN, ZONE);
 
     assertThat(result.events()).isEqualTo(1);
-  }
-
-  @Test
-  void removesTheOldTemplatesWithBracketsThatThePlayerCannotUse() {
-    when(query.getTemplates(HOST))
-        .thenReturn(
-            List.of(
-                new PlayerTemplate(
-                    "Vieja ~ctv-88888888",
-                    "Vieja ~ctv-88888888.zip",
-                    "h",
-                    1,
-                    null,
-                    List.of(),
-                    null)));
-
-    publisher.publish(HOST, PLAN, ZONE);
-
-    verify(commands)
-        .send(HOST, "Template.deleteTemplate", Map.of("file", "Vieja ~ctv-88888888.zip"));
   }
 }

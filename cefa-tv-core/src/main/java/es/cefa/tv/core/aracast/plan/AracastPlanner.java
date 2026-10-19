@@ -8,9 +8,12 @@ import es.cefa.tv.core.manifest.model.ManifestDocument.ItemEntry;
 import es.cefa.tv.core.manifest.model.ManifestDocument.PageEntry;
 import es.cefa.tv.core.manifest.model.ManifestDocument.PlaylistEntry;
 import es.cefa.tv.core.manifest.model.ManifestDocument.ScheduleEntry;
+import es.cefa.tv.core.player.model.IdleLogo;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.EnumSet;
@@ -40,11 +43,16 @@ public final class AracastPlanner {
   /** Máximo de eventos en una programación; un fichero mayor no es razonable para el player. */
   public static final int MAX_EVENTS = 3000;
 
+  /** Minutos por delante que cubren los eventos con fecha de los ciclos de plantillas. */
+  public static final int ROLLING_MINUTES = 180;
+
+  private static final int MIN_ROLLING_MINUTES = 20;
   private static final int SECONDS_PER_DAY = 24 * 60 * 60;
   private static final int LAST_SECOND = SECONDS_PER_DAY - 30;
   private static final int NAME_LIMIT = 50;
+  private static final int MAX_SLIDES = 240;
 
-  /** Plantilla que el player emite cuando no hay ningún evento activo. */
+  /** Plantilla que el propio player emite cuando no hay ningún evento ni plantilla por defecto. */
   public static final String DEFAULT_TEMPLATE = "basic_json";
 
   private AracastPlanner() {}
@@ -52,58 +60,184 @@ public final class AracastPlanner {
   /**
    * Calcula el plan de un manifest.
    *
+   * <p>Una playlist que cabe en una sola plantilla se publica como eventos semanales para los
+   * próximos siete días. Una que necesita un ciclo de plantillas se publica como eventos con fecha
+   * solo para las próximas horas, porque repetidos todo el día serían miles; se regeneran a menudo.
+   *
    * @param manifest manifest del reproductor
-   * @param today primer día de la ventana, en la zona horaria del reproductor
+   * @param now instante actual en la zona horaria del reproductor
+   * @param idle logo de la pantalla en reposo
    * @return plantillas y eventos
    * @throws UnsupportedPlaylistException si una playlist no se puede emitir
    */
-  public static AracastPlan plan(ManifestDocument manifest, LocalDate today) {
+  public static AracastPlan plan(ManifestDocument manifest, LocalDateTime now, IdleLogo idle) {
+    LocalDate today = now.toLocalDate();
     Map<String, PlaylistPlan> playlists = new LinkedHashMap<>();
     for (PlaylistEntry playlist : nullSafe(manifest.playlists()).values()) {
       playlists.put(playlist.id(), planPlaylist(playlist, manifest));
     }
-    Map<EventKey, Set<DayOfWeek>> grouped = new LinkedHashMap<>();
+    Map<EventKey, Set<DayOfWeek>> weekly = new LinkedHashMap<>();
+    List<Segment> cycles = new ArrayList<>();
     for (int offset = 0; offset < WINDOW_DAYS; offset++) {
       LocalDate date = today.plusDays(offset);
       for (Segment segment : daySegments(manifest, date)) {
         PlaylistPlan plan = playlists.get(segment.playlistId());
-        if (plan != null) {
-          for (EventKey event : expand(plan, segment)) {
-            grouped
-                .computeIfAbsent(event, key -> EnumSet.noneOf(DayOfWeek.class))
-                .add(date.getDayOfWeek());
-          }
+        if (plan == null) {
+          continue;
+        }
+        if (plan.single()) {
+          add(weekly, date, plan.steps().get(0).template(), segment.start(), segment.end());
+        } else {
+          cycles.add(segment.on(date));
         }
       }
     }
-    if (grouped.size() > MAX_EVENTS) {
-      throw new UnsupportedPlaylistException(
-          "La programación necesita "
-              + grouped.size()
-              + " cambios de plantilla (máximo "
-              + MAX_EVENTS
-              + "). Usa elementos más largos o menos elementos mezclados en las playlists");
+    LocalDateTime windowStart = now.truncatedTo(ChronoUnit.MINUTES);
+    List<PlannedEvent> dated = List.of();
+    for (int minutes = ROLLING_MINUTES; ; minutes /= 2) {
+      dated = expandCycles(cycles, playlists, windowStart, windowStart.plusMinutes(minutes));
+      if (weekly.size() + dated.size() <= MAX_EVENTS) {
+        break;
+      }
+      if (minutes / 2 < MIN_ROLLING_MINUTES) {
+        throw new UnsupportedPlaylistException(
+            "La programación necesita demasiados cambios de plantilla ("
+                + (weekly.size() + dated.size())
+                + ", máximo "
+                + MAX_EVENTS
+                + "). Usa elementos más largos o menos elementos mezclados en las playlists");
+      }
     }
-    List<PlannedEvent> events =
-        grouped.entrySet().stream()
-            .map(
-                e ->
-                    new PlannedEvent(
-                        e.getKey().template(),
-                        LocalTime.ofSecondOfDay(e.getKey().start()),
-                        LocalTime.ofSecondOfDay(e.getKey().end()),
-                        e.getValue()))
-            .sorted(
-                Comparator.comparing(PlannedEvent::start)
-                    .thenComparing(PlannedEvent::end)
-                    .thenComparing(PlannedEvent::template))
-            .toList();
+    List<PlannedEvent> events = new ArrayList<>();
+    weekly.entrySet().stream()
+        .map(
+            e ->
+                new PlannedEvent(
+                    e.getKey().template(),
+                    LocalTime.ofSecondOfDay(e.getKey().start()),
+                    LocalTime.ofSecondOfDay(e.getKey().end()),
+                    e.getValue(),
+                    null))
+        .sorted(
+            Comparator.comparing(PlannedEvent::start)
+                .thenComparing(PlannedEvent::end)
+                .thenComparing(PlannedEvent::template))
+        .forEach(events::add);
+    events.addAll(dated);
     Map<String, PlannedTemplate> templates = new LinkedHashMap<>();
     playlists.values().forEach(p -> p.templates().forEach(t -> templates.putIfAbsent(t.name(), t)));
     Set<String> used = new TreeSet<>();
     events.forEach(e -> used.add(e.template()));
     return new AracastPlan(
-        templates.values().stream().filter(t -> used.contains(t.name())).toList(), events);
+        templates.values().stream().filter(t -> used.contains(t.name())).toList(),
+        events,
+        idleTemplate(idle),
+        !cycles.isEmpty());
+  }
+
+  /**
+   * Plantilla que debe estar en emisión en un instante según el plan.
+   *
+   * @param plan plan publicado
+   * @param now instante en la zona horaria del player
+   * @return el nombre de la plantilla; la de reposo si no hay evento activo
+   */
+  public static String activeTemplate(AracastPlan plan, LocalDateTime now) {
+    LocalTime time = now.toLocalTime();
+    return plan.events().stream()
+        .filter(
+            e ->
+                e.date() == null
+                    ? e.days().contains(now.getDayOfWeek())
+                    : e.date().equals(now.toLocalDate()))
+        .filter(e -> !time.isBefore(e.start()) && time.isBefore(e.end()))
+        .map(PlannedEvent::template)
+        .findFirst()
+        .orElse(plan.idle() == null ? DEFAULT_TEMPLATE : plan.idle().name());
+  }
+
+  /**
+   * Plantilla de la pantalla en reposo: el logo sobre fondo oscuro, igual que en un reproductor.
+   *
+   * @param idle logo elegido
+   * @return la plantilla, con la imagen incluida en la aplicación
+   */
+  public static PlannedTemplate idleTemplate(IdleLogo idle) {
+    IdleLogo logo = idle == null ? IdleLogo.CEFA : idle;
+    boolean cefa = logo == IdleLogo.CEFA;
+    return new PlannedTemplate(
+        cefa
+            ? "Pantalla en reposo CEFA ~ctv-0000cefa"
+            : "Pantalla en reposo ALGONTEC ~ctv-0a190000",
+        TemplateKind.IMAGE,
+        List.of(
+            new PlannedContent(
+                BUILTIN + (cefa ? "idle-cefa" : "idle-algontec"),
+                cefa ? "pantalla en reposo cefa.png" : "pantalla en reposo algontec.png",
+                "image/png")),
+        10,
+        null,
+        true);
+  }
+
+  /** Prefijo del identificador de un fichero que viene incluido en la aplicación. */
+  public static final String BUILTIN = "builtin:";
+
+  private static void add(
+      Map<EventKey, Set<DayOfWeek>> weekly, LocalDate date, String template, int start, int end) {
+    int cappedEnd = Math.min(end, LAST_SECOND);
+    if (cappedEnd > start) {
+      weekly
+          .computeIfAbsent(
+              new EventKey(template, start, cappedEnd), key -> EnumSet.noneOf(DayOfWeek.class))
+          .add(date.getDayOfWeek());
+    }
+  }
+
+  /** Expande los ciclos en eventos con fecha dentro de la ventana de tiempo. */
+  private static List<PlannedEvent> expandCycles(
+      List<Segment> cycles,
+      Map<String, PlaylistPlan> playlists,
+      LocalDateTime windowStart,
+      LocalDateTime windowEnd) {
+    List<PlannedEvent> events = new ArrayList<>();
+    for (Segment segment : cycles) {
+      PlaylistPlan plan = playlists.get(segment.playlistId());
+      LocalDateTime segmentStart = segment.date().atStartOfDay().plusSeconds(segment.start());
+      LocalDateTime segmentEnd =
+          segment.date().atStartOfDay().plusSeconds(Math.min(segment.end(), LAST_SECOND));
+      LocalDateTime from = segmentStart.isAfter(windowStart) ? segmentStart : windowStart;
+      LocalDateTime to = segmentEnd.isBefore(windowEnd) ? segmentEnd : windowEnd;
+      if (!from.isBefore(to)) {
+        continue;
+      }
+      LocalDateTime cursor = segmentStart;
+      while (cursor.isBefore(to)) {
+        for (Step step : plan.steps()) {
+          LocalDateTime stepEnd = cursor.plusSeconds(step.seconds());
+          LocalDateTime start = cursor.isAfter(from) ? cursor : from;
+          LocalDateTime end = stepEnd.isBefore(to) ? stepEnd : to;
+          if (end.isAfter(start)) {
+            events.add(
+                new PlannedEvent(
+                    step.template(),
+                    start.toLocalTime(),
+                    end.toLocalTime(),
+                    Set.of(),
+                    start.toLocalDate()));
+          }
+          cursor = stepEnd;
+          if (!cursor.isBefore(to)) {
+            break;
+          }
+        }
+      }
+    }
+    events.sort(
+        Comparator.comparing(PlannedEvent::date)
+            .thenComparing(PlannedEvent::start)
+            .thenComparing(PlannedEvent::template));
+    return events;
   }
 
   private static PlaylistPlan planPlaylist(PlaylistEntry playlist, ManifestDocument manifest) {
@@ -138,6 +272,10 @@ public final class AracastPlanner {
                     templateName(playlist, null), TemplateKind.SLIDESHOW, images, each, null, true);
         return PlaylistPlan.single(template);
       }
+      PlannedTemplate repeated = repeatedSlides(playlist, images, seconds);
+      if (repeated != null) {
+        return PlaylistPlan.single(repeated);
+      }
     } else if (items.stream().allMatch(r -> "VIDEO".equals(r.asset().type()))
         && items.stream().map(r -> r.item().muted()).distinct().count() == 1) {
       List<PlannedContent> videos = new ArrayList<>();
@@ -156,6 +294,37 @@ public final class AracastPlanner {
       return PlaylistPlan.single(itemTemplate(playlist, items.get(0), files, null));
     }
     return sequence(playlist, items, files);
+  }
+
+  /**
+   * Pase de diapositivas para imágenes con duraciones distintas: el player solo admite una duración
+   * por diapositiva, así que cada imagen se repite tantas veces como duraciones base contiene (el
+   * máximo común divisor). La transición entre dos copias iguales no se nota.
+   */
+  private static PlannedTemplate repeatedSlides(
+      PlaylistEntry playlist, List<PlannedContent> images, List<Integer> seconds) {
+    int divisor = 0;
+    for (int value : seconds) {
+      divisor = gcd(divisor, value);
+    }
+    if (divisor < 1) {
+      return null;
+    }
+    List<PlannedContent> slides = new ArrayList<>();
+    for (int i = 0; i < images.size(); i++) {
+      for (int copy = 0; copy < seconds.get(i) / divisor; copy++) {
+        slides.add(images.get(i));
+      }
+    }
+    if (slides.size() > MAX_SLIDES) {
+      return null;
+    }
+    return new PlannedTemplate(
+        templateName(playlist, null), TemplateKind.SLIDESHOW, slides, divisor, null, true);
+  }
+
+  private static int gcd(int a, int b) {
+    return b == 0 ? a : gcd(b, a % b);
   }
 
   private static PlaylistPlan sequence(
@@ -234,23 +403,6 @@ public final class AracastPlanner {
     return base + (number == null ? "" : " " + number) + " " + marker;
   }
 
-  /**
-   * Plantilla que debe estar en emisión en un instante según el plan.
-   *
-   * @param plan plan publicado
-   * @param now instante en la zona horaria del player
-   * @return el nombre de la plantilla, o {@code basic_json} (el logo) si no hay evento activo
-   */
-  public static String activeTemplate(AracastPlan plan, java.time.LocalDateTime now) {
-    LocalTime time = now.toLocalTime();
-    return plan.events().stream()
-        .filter(e -> e.days().contains(now.getDayOfWeek()))
-        .filter(e -> !time.isBefore(e.start()) && time.isBefore(e.end()))
-        .map(PlannedEvent::template)
-        .findFirst()
-        .orElse(DEFAULT_TEMPLATE);
-  }
-
   private static List<Segment> daySegments(ManifestDocument manifest, LocalDate date) {
     List<Sched> schedules =
         nullSafe(manifest.schedules()).stream()
@@ -297,33 +449,6 @@ public final class AracastPlanner {
         .reduce((a, b) -> Sched.PRECEDENCE.compare(a, b) >= 0 ? a : b);
   }
 
-  private static List<EventKey> expand(PlaylistPlan plan, Segment segment) {
-    List<EventKey> events = new ArrayList<>();
-    if (plan.single()) {
-      add(events, plan.steps().get(0).template(), segment.start(), segment.end());
-      return events;
-    }
-    int t = segment.start();
-    while (t < segment.end()) {
-      for (Step step : plan.steps()) {
-        int end = Math.min(t + step.seconds(), segment.end());
-        add(events, step.template(), t, end);
-        t = end;
-        if (t >= segment.end()) {
-          break;
-        }
-      }
-    }
-    return events;
-  }
-
-  private static void add(List<EventKey> events, String template, int start, int end) {
-    int cappedEnd = Math.min(end, LAST_SECOND);
-    if (cappedEnd > start) {
-      events.add(new EventKey(template, start, cappedEnd));
-    }
-  }
-
   private static Map<String, FileEntry> filesBySha(ManifestDocument manifest) {
     Map<String, FileEntry> files = new LinkedHashMap<>();
     nullSafe(manifest.files()).forEach(f -> files.putIfAbsent(f.sha256(), f));
@@ -352,7 +477,16 @@ public final class AracastPlanner {
     return map == null ? Map.of() : map;
   }
 
-  private record Segment(int start, int end, String playlistId) {}
+  private record Segment(int start, int end, String playlistId, LocalDate date) {
+
+    Segment(int start, int end, String playlistId) {
+      this(start, end, playlistId, null);
+    }
+
+    Segment on(LocalDate day) {
+      return new Segment(start, end, playlistId, day);
+    }
+  }
 
   private record EventKey(String template, int start, int end) {}
 

@@ -196,6 +196,26 @@ public class AracastPlayerService {
   }
 
   /**
+   * Anota que una versión no necesita publicarse: el player no tiene nada programado desde CEFA TV
+   * y todavía conserva su programación anterior, que no se debe borrar.
+   *
+   * @param playerId reproductor
+   * @param version versión que se da por aplicada
+   */
+  @Transactional
+  public void recordSkipped(UUID playerId, long version) {
+    players
+        .findById(playerId)
+        .ifPresent(
+            player -> {
+              if (version > player.getAppliedVersion()) {
+                player.setAppliedVersion(version);
+              }
+            });
+    deliveries.markApplied(playerId, version);
+  }
+
+  /**
    * Anota que no se pudo publicar en el player.
    *
    * @param playerId reproductor
@@ -243,7 +263,6 @@ public class AracastPlayerService {
     if (status.timezone() != null) {
       player.setTimezone(status.timezone());
     }
-    player.setLastError(null);
     Map<String, Object> hardware = new LinkedHashMap<>();
     hardware.put("model", status.model());
     hardware.put("mac", status.mac());

@@ -46,6 +46,7 @@ public final class AuditActionCatalog {
           new AuditActionResponse("GROUP_SITE_ASSIGN", "PLAYER_GROUP"),
           new AuditActionResponse("GROUP_IDLE_LOGO_CHANGE", "PLAYER_GROUP"),
           new AuditActionResponse("PAIRING_CLAIM", "PLAYER"),
+          new AuditActionResponse("ARACAST_PUBLISH", "PLAYER"),
           new AuditActionResponse("PLAYER_ARACAST_CREATE", "PLAYER"),
           new AuditActionResponse("SITE_ARACAST_DISCOVER", "SITE"),
           new AuditActionResponse("PLAYER_ARACAST_CREDENTIALS", "PLAYER"),
