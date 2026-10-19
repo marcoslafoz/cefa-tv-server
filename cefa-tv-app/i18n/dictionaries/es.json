@@ -1026,6 +1026,10 @@
       "PLAYER_REMOTE_STOP": "Detener control remoto",
       "PLAYER_SHELL_OPEN": "Abrir terminal",
       "PLAYER_SHELL_CLOSE": "Cerrar terminal",
+      "ARACAST_PUBLISH": "Envío de programación a Aracast",
+      "PLAYER_ARACAST_CREATE": "Alta de Aracast",
+      "PLAYER_ARACAST_CREDENTIALS": "Cambiar contraseñas de Aracast",
+      "SITE_ARACAST_DISCOVER": "Buscar Aracast en una sede",
       "AUDIT_EXPORT": "Exportar auditoría",
       "AUDIT_SETTINGS_UPDATE": "Cambiar ajustes de auditoría",
       "AUDIT_PURGE": "Purgar auditoría antigua"

@@ -131,7 +131,7 @@ function PlayerDetail() {
           : edits.siteId === NO_SITE
             ? { clearSite: true }
             : { siteId: edits.siteId }),
-        ...(isAracast || edits.idleLogo === undefined
+        ...(edits.idleLogo === undefined
           ? {}
           : edits.idleLogo === IDLE_LOGO_INHERIT
             ? { clearIdleLogo: true }
@@ -395,45 +395,43 @@ function PlayerDetail() {
                   />
                 </div>
                 {isAracast ? null : (
-                  <>
-                    <OutputSelect player={current} value={output} onChange={setOutput} />
-                    <IdleLogoSelect
-                      value={idleLogo}
-                      onChange={setIdleLogo}
-                      disabled={!canManage}
-                      hint={dict.idleLogo.hint}
-                      status={idleLogoStatus(current)}
-                      inheritLogo={selectedGroup?.idleLogo ?? DEFAULT_IDLE_LOGO}
-                      inheritLabel={
-                        selectedGroup?.idleLogo
-                          ? dict.idleLogo.inheritFromGroup
-                              .replace('{group}', selectedGroup.name)
-                              .replace('{logo}', dict.idleLogo.logos[selectedGroup.idleLogo])
-                          : dict.idleLogo.inheritDefault.replace(
-                              '{logo}',
-                              dict.idleLogo.logos[DEFAULT_IDLE_LOGO]
-                            )
-                      }
-                      effective={
-                        current.effectiveIdleLogo
-                          ? {
-                              logo: current.effectiveIdleLogo,
-                              text: `${dict.idleLogo.effective.replace('{logo}', dict.idleLogo.logos[current.effectiveIdleLogo])} (${
-                                current.idleLogoSource === 'PLAYER'
-                                  ? dict.idleLogo.sourcePlayer
-                                  : current.idleLogoSource === 'GROUP'
-                                    ? dict.idleLogo.sourceGroup.replace(
-                                        '{group}',
-                                        current.groupName ?? ''
-                                      )
-                                    : dict.idleLogo.sourceDefault
-                              })`,
-                            }
-                          : null
-                      }
-                    />
-                  </>
+                  <OutputSelect player={current} value={output} onChange={setOutput} />
                 )}
+                <IdleLogoSelect
+                  value={idleLogo}
+                  onChange={setIdleLogo}
+                  disabled={!canManage}
+                  hint={dict.idleLogo.hint}
+                  status={idleLogoStatus(current)}
+                  inheritLogo={selectedGroup?.idleLogo ?? DEFAULT_IDLE_LOGO}
+                  inheritLabel={
+                    selectedGroup?.idleLogo
+                      ? dict.idleLogo.inheritFromGroup
+                          .replace('{group}', selectedGroup.name)
+                          .replace('{logo}', dict.idleLogo.logos[selectedGroup.idleLogo])
+                      : dict.idleLogo.inheritDefault.replace(
+                          '{logo}',
+                          dict.idleLogo.logos[DEFAULT_IDLE_LOGO]
+                        )
+                  }
+                  effective={
+                    current.effectiveIdleLogo
+                      ? {
+                          logo: current.effectiveIdleLogo,
+                          text: `${dict.idleLogo.effective.replace('{logo}', dict.idleLogo.logos[current.effectiveIdleLogo])} (${
+                            current.idleLogoSource === 'PLAYER'
+                              ? dict.idleLogo.sourcePlayer
+                              : current.idleLogoSource === 'GROUP'
+                                ? dict.idleLogo.sourceGroup.replace(
+                                    '{group}',
+                                    current.groupName ?? ''
+                                  )
+                                : dict.idleLogo.sourceDefault
+                          })`,
+                        }
+                      : null
+                  }
+                />
                 <div className="flex items-end justify-between gap-3 rounded-lg border px-3 py-2">
                   <Label htmlFor="player-enabled">{dict.players.enabled}</Label>
                   <Switch

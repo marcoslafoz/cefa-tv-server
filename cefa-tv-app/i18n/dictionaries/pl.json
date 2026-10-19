@@ -1026,6 +1026,10 @@
       "PLAYER_REMOTE_STOP": "Zakończenie zdalnego sterowania",
       "PLAYER_SHELL_OPEN": "Otwarcie terminala",
       "PLAYER_SHELL_CLOSE": "Zamknięcie terminala",
+      "ARACAST_PUBLISH": "Wysłanie harmonogramu do Aracast",
+      "PLAYER_ARACAST_CREATE": "Dodanie Aracast",
+      "PLAYER_ARACAST_CREDENTIALS": "Zmiana haseł Aracast",
+      "SITE_ARACAST_DISCOVER": "Wyszukiwanie Aracast w lokalizacji",
       "AUDIT_EXPORT": "Eksport audytu",
       "AUDIT_SETTINGS_UPDATE": "Zmiana ustawień audytu",
       "AUDIT_PURGE": "Czyszczenie starych wpisów audytu"

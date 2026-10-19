@@ -1026,6 +1026,10 @@
       "PLAYER_REMOTE_STOP": "Stop remote control",
       "PLAYER_SHELL_OPEN": "Open terminal",
       "PLAYER_SHELL_CLOSE": "Close terminal",
+      "ARACAST_PUBLISH": "Schedule sent to Aracast",
+      "PLAYER_ARACAST_CREATE": "Aracast added",
+      "PLAYER_ARACAST_CREDENTIALS": "Aracast passwords changed",
+      "SITE_ARACAST_DISCOVER": "Aracast search in a site",
       "AUDIT_EXPORT": "Export audit log",
       "AUDIT_SETTINGS_UPDATE": "Change audit settings",
       "AUDIT_PURGE": "Purge old audit entries"
