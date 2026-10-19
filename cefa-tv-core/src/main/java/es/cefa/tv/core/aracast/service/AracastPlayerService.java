@@ -173,6 +173,30 @@ public class AracastPlayerService {
   }
 
   /**
+   * Si el reproductor aún lleva el nombre provisional "Aracast &lt;ip&gt;", le pone el nombre que
+   * tiene realmente el equipo.
+   *
+   * @param playerId reproductor
+   * @param hostname consulta del nombre configurado en el player, que solo se hace si hace falta
+   */
+  @Transactional
+  public void adoptHostname(UUID playerId, java.util.function.Supplier<String> hostname) {
+    Player player = players.findById(playerId).orElse(null);
+    if (player == null
+        || !player.getName().matches("(?i)Aracast \\d{1,3}(\\.\\d{1,3}){3}( \\d+)?")) {
+      return;
+    }
+    String real = blankToNull(hostname.get());
+    if (real == null) {
+      return;
+    }
+    if (!real.equals(player.getName())) {
+      player.setName(uniqueName(real));
+      players.save(player);
+    }
+  }
+
+  /**
    * Anota que una versión se ha publicado en el player.
    *
    * @param playerId reproductor

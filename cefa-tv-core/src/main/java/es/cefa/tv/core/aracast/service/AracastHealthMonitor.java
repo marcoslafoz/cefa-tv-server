@@ -2,6 +2,7 @@ package es.cefa.tv.core.aracast.service;
 
 import es.cefa.tv.core.aracast.client.AracastCommandClient;
 import es.cefa.tv.core.aracast.dto.PlayerStatus;
+import es.cefa.tv.core.aracast.management.AracastNetworkService;
 import es.cefa.tv.core.aracast.model.AracastPlayer;
 import es.cefa.tv.core.aracast.repository.AracastPlayerRepository;
 import jakarta.annotation.PreDestroy;
@@ -30,6 +31,7 @@ public class AracastHealthMonitor {
   private final AracastCommandClient commands;
   private final AracastQueryService query;
   private final AracastPlayerService service;
+  private final AracastNetworkService network;
   private final ExecutorService executor = Executors.newFixedThreadPool(PARALLELISM);
 
   /** Tarea periódica de comprobación. */
@@ -51,6 +53,8 @@ public class AracastHealthMonitor {
       }
       PlayerStatus status = query.getStatus(aracast.getHost());
       service.applyStatus(aracast.getPlayerId(), status);
+      service.adoptHostname(
+          aracast.getPlayerId(), () -> network.get(aracast.getHost()).configured().hostname());
     } catch (RuntimeException e) {
       log.debug("No se pudo refrescar el Aracast {}: {}", aracast.getHost(), e.getMessage());
     }
