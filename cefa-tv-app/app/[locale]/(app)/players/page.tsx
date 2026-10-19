@@ -1,7 +1,7 @@
 'use client'
 
 import { ROW_CLASS, rowActivation } from '@/lib/row-activation'
-import { Suspense, useCallback, useEffect, useMemo, useState } from 'react'
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import {
@@ -73,6 +73,8 @@ const STATUS_KEYS: StatusKey[] = ['online', 'offline', 'pending', 'never']
 const NONE = 'none'
 const DENSITY_KEY = 'cefa-tv.players.density'
 const GROUP_BY_SITE_KEY = 'cefa-tv.players.groupBySite'
+const LIVE_KEY = 'cefa-tv.players.live'
+const FILTERS_KEY = 'cefa-tv.players.filters'
 
 function parseList(value: string | null): string[] {
   return value ? value.split(',').filter(Boolean) : []
@@ -88,6 +90,10 @@ function matchesStatus(player: Player, statuses: StatusKey[]): boolean {
   })
 }
 
+function hasUrlFilters(params: URLSearchParams | { has(key: string): boolean }) {
+  return ['groups', 'sites', 'status', 'versions', 'q'].some((key) => params.has(key))
+}
+
 function PlayersContent() {
   const dict = useDictionary()
   const fmt = useFormat()
@@ -100,15 +106,18 @@ function PlayersContent() {
   const [pairing, setPairing] = useState(false)
   const [toRemove, setToRemove] = useState<Player | null>(null)
   const [density, setDensity] = useState<Density>(() => readStored<Density>(DENSITY_KEY, 'large'))
-  const [groupBySite, setGroupBySite] = useState(() =>
-    readStored<boolean>(GROUP_BY_SITE_KEY, false)
-  )
-  const [live, setLive] = useState(false)
+  const [groupBySite, setGroupBySite] = useState(() => readStored<boolean>(GROUP_BY_SITE_KEY, true))
+  const [live, setLive] = useState(() => readStored<boolean>(LIVE_KEY, true))
   const [sort, setSort] = useState<{ key: SortKey; descending: boolean }>({
     key: 'name',
     descending: false,
   })
-  const [search, setSearch] = useState(searchParams.get('q') ?? '')
+  const [search, setSearch] = useState(() => {
+    const fromUrl = searchParams.get('q')
+    if (fromUrl !== null || hasUrlFilters(searchParams)) return fromUrl ?? ''
+    const saved = readStored<{ q?: string } | null>(FILTERS_KEY, null)
+    return typeof saved?.q === 'string' ? saved.q : ''
+  })
   const resource = useApiResource<Player[] | Page<Player>>(`${API_V1}/players`, {
     intervalMs: 5000,
   })
@@ -141,6 +150,28 @@ function PlayersContent() {
     [router, pathname, searchParams]
   )
 
+  const filtersRestored = useRef(false)
+  const filtersKey = JSON.stringify([groupFilter, siteFilter, statusFilter, versionFilter, query])
+
+  useEffect(() => {
+    if (!filtersRestored.current) {
+      filtersRestored.current = true
+      const saved = readStored<Record<string, string[] | string> | null>(FILTERS_KEY, null)
+      if (!hasUrlFilters(searchParams) && saved) {
+        updateParams(saved)
+        return
+      }
+    }
+    writeStored(FILTERS_KEY, {
+      groups: groupFilter,
+      sites: siteFilter,
+      status: statusFilter,
+      versions: versionFilter,
+      q: query,
+    })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filtersKey])
+
   useEffect(() => {
     const timer = window.setTimeout(() => {
       if (search.trim() !== query) updateParams({ q: search.trim() })
@@ -151,6 +182,11 @@ function PlayersContent() {
   function changeDensity(next: Density) {
     setDensity(next)
     writeStored(DENSITY_KEY, next)
+  }
+
+  function changeLive(next: boolean) {
+    setLive(next)
+    writeStored(LIVE_KEY, next)
   }
 
   function changeGroupBySite(next: boolean) {
@@ -587,7 +623,7 @@ function PlayersContent() {
               ) : null}
               {density !== 'table' ? (
                 <label className="flex items-center gap-2 text-sm">
-                  <Switch checked={live} onCheckedChange={setLive} />
+                  <Switch checked={live} onCheckedChange={changeLive} />
                   {dict.players.preview.live}
                 </label>
               ) : null}
