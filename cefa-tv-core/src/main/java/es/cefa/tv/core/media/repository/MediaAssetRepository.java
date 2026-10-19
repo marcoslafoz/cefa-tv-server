@@ -39,6 +39,14 @@ public interface MediaAssetRepository
   boolean existsByFolderId(UUID folderId);
 
   /**
+   * Medios en un estado concreto.
+   *
+   * @param status estado buscado
+   * @return los medios en ese estado
+   */
+  List<MediaAsset> findByStatus(es.cefa.tv.core.media.model.MediaStatus status);
+
+  /**
    * Mueve todos los medios de una carpeta a otra.
    *
    * @param from carpeta de origen

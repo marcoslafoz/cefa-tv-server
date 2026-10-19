@@ -84,6 +84,16 @@ cefa:
       ffprobe-path: ${FFPROBE_PATH:ffprobe}
       pdf-dpi: 110
       temp-dir: ${MEDIA_TEMP_DIR:}
+      compression:
+        enabled: ${MEDIA_COMPRESSION_ENABLED:true}
+        max-width: ${MEDIA_COMPRESSION_MAX_WIDTH:1920}
+        max-height: ${MEDIA_COMPRESSION_MAX_HEIGHT:1080}
+        image-quality: ${MEDIA_COMPRESSION_IMAGE_QUALITY:4}
+        video-crf: ${MEDIA_COMPRESSION_VIDEO_CRF:23}
+        video-preset: ${MEDIA_COMPRESSION_VIDEO_PRESET:fast}
+        audio-bitrate: ${MEDIA_COMPRESSION_AUDIO_BITRATE:128k}
+        video-timeout-minutes: ${MEDIA_COMPRESSION_VIDEO_TIMEOUT_MINUTES:120}
+        min-saving-percent: ${MEDIA_COMPRESSION_MIN_SAVING_PERCENT:5}
     manifest:
       debounce-ms: 2000
     player:

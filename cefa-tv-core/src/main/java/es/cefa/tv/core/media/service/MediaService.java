@@ -26,6 +26,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 import java.security.DigestInputStream;
 import java.security.MessageDigest;
 import java.time.Instant;
@@ -65,6 +66,8 @@ public class MediaService {
   private final CoreProperties properties;
   private final ApplicationEventPublisher events;
   private final FolderService folders;
+  private final MediaCompressor compressor;
+  private final MediaCompressionProperties compression;
 
   /**
    * Lista medios con filtros opcionales.
@@ -243,6 +246,7 @@ public class MediaService {
     UUID id = UUID.randomUUID();
     Path workDir = null;
     List<String> uploadedKeys = new ArrayList<>();
+    boolean handedOff = false;
     try {
       workDir = createWorkDir();
       Path original = workDir.resolve("original");
@@ -253,6 +257,15 @@ public class MediaService {
       long size = Files.size(original);
       String sha256 = Hashes.hex(digest);
       String mime = effectiveMime(name, file.getContentType(), type);
+      if (type == MediaType.IMAGE) {
+        var compressed = compressor.compressImage(original, name, workDir);
+        if (compressed.isPresent()) {
+          Files.move(compressed.get(), original, StandardCopyOption.REPLACE_EXISTING);
+          log.info("Imagen {} comprimida de {} a {} bytes", name, size, Files.size(original));
+          size = Files.size(original);
+          sha256 = sha256Of(original);
+        }
+      }
 
       MediaAsset asset = newAsset(name, type, username);
       asset.setFolderId(folderId);
@@ -286,8 +299,14 @@ public class MediaService {
         uploadedKeys.add(thumbnailKey);
         asset.setThumbnailKey(thumbnailKey);
       }
-      asset.setStatus(MediaStatus.READY);
-      return persist(asset, files);
+      boolean compressLater = type == MediaType.VIDEO && compression.enabled();
+      asset.setStatus(compressLater ? MediaStatus.PROCESSING : MediaStatus.READY);
+      MediaResponse response = persist(asset, files);
+      if (compressLater) {
+        events.publishEvent(new MediaCompressionRequested(id, workDir, original));
+        handedOff = true;
+      }
+      return response;
     } catch (IOException e) {
       uploadedKeys.forEach(this::deleteQuietly);
       throw ApiException.unprocessable(
@@ -296,7 +315,9 @@ public class MediaService {
       uploadedKeys.forEach(this::deleteQuietly);
       throw e;
     } finally {
-      deleteRecursively(workDir);
+      if (!handedOff) {
+        deleteRecursively(workDir);
+      }
     }
   }
 
