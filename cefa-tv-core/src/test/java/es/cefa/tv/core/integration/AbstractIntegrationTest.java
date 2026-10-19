@@ -29,11 +29,12 @@ import org.springframework.util.MultiValueMap;
 import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.containers.wait.strategy.Wait;
+import org.testcontainers.images.builder.Transferable;
 import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.utility.DockerImageName;
 
 /**
- * Base de las pruebas de integración: PostgreSQL y MinIO reales en contenedores y la aplicación en
+ * Base de las pruebas de integración: PostgreSQL y Garage reales en contenedores y la aplicación en
  * un puerto aleatorio.
  */
 @Testcontainers(disabledWithoutDocker = true)
@@ -44,22 +45,69 @@ abstract class AbstractIntegrationTest {
   static final String ADMIN_PASSWORD = "admin-test-1234";
 
   static final PostgreSQLContainer<?> POSTGRES = new PostgreSQLContainer<>("postgres:16-alpine");
-  static final GenericContainer<?> MINIO =
+  static final String S3_ACCESS_KEY = "GK0123456789abcdef01234567";
+  static final String S3_SECRET_KEY =
+      "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
+  static final String S3_BUCKET = "cefa-tv-media";
+  static final String GARAGE_CONFIG =
+      """
+      metadata_dir = "/var/lib/garage/meta"
+      data_dir = "/var/lib/garage/data"
+      db_engine = "lmdb"
+      replication_factor = 1
+      rpc_bind_addr = "[::]:3901"
+      rpc_public_addr = "127.0.0.1:3901"
+      rpc_secret = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+      [s3_api]
+      s3_region = "garage"
+      api_bind_addr = "[::]:3900"
+      """;
+
+  static final GenericContainer<?> GARAGE =
       new GenericContainer<>(
               DockerImageName.parse(
-                  System.getProperty("test.minio.image", "cgr.dev/chainguard/minio:latest")))
-          .withEnv("MINIO_ROOT_USER", "cefatv")
-          .withEnv("MINIO_ROOT_PASSWORD", "cefatv-secret")
-          .withCommand("server", "/data")
-          .withExposedPorts(9000)
+                  System.getProperty("test.garage.image", "dxflrs/garage:v2.1.0")))
+          .withCopyToContainer(Transferable.of(GARAGE_CONFIG), "/etc/garage.toml")
+          .withExposedPorts(3900)
           .waitingFor(
-              Wait.forHttp("/minio/health/live")
-                  .forPort(9000)
+              Wait.forLogMessage(".*S3 API server listening.*", 1)
                   .withStartupTimeout(Duration.ofSeconds(60)));
 
   static {
     POSTGRES.start();
-    MINIO.start();
+    GARAGE.start();
+    initGarage();
+  }
+
+  private static void initGarage() {
+    try {
+      String nodeId =
+          garage("status")
+              .lines()
+              .filter(line -> line.contains("NO ROLE ASSIGNED"))
+              .map(line -> line.trim().split("\\s+")[0])
+              .findFirst()
+              .orElseThrow();
+      garage("layout", "assign", "-z", "dc1", "-c", "1G", nodeId);
+      garage("layout", "apply", "--version", "1");
+      garage("key", "import", "--yes", "-n", "test", S3_ACCESS_KEY, S3_SECRET_KEY);
+      garage("bucket", "create", S3_BUCKET);
+      garage("bucket", "allow", "--read", "--write", "--owner", S3_BUCKET, "--key", S3_ACCESS_KEY);
+    } catch (IOException | InterruptedException e) {
+      throw new IllegalStateException("No se pudo inicializar Garage", e);
+    }
+  }
+
+  private static String garage(String... args) throws IOException, InterruptedException {
+    String[] command = new String[args.length + 1];
+    command[0] = "/garage";
+    System.arraycopy(args, 0, command, 1, args.length);
+    var result = GARAGE.execInContainer(command);
+    if (result.getExitCode() != 0) {
+      throw new IllegalStateException(
+          "garage " + String.join(" ", args) + " falló: " + result.getStderr());
+    }
+    return result.getStdout();
   }
 
   @DynamicPropertySource
@@ -68,10 +116,11 @@ abstract class AbstractIntegrationTest {
     registry.add("spring.datasource.username", POSTGRES::getUsername);
     registry.add("spring.datasource.password", POSTGRES::getPassword);
     registry.add(
-        "cefa.tv.minio.endpoint",
-        () -> "http://" + MINIO.getHost() + ":" + MINIO.getMappedPort(9000));
-    registry.add("cefa.tv.minio.access-key", () -> "cefatv");
-    registry.add("cefa.tv.minio.secret-key", () -> "cefatv-secret");
+        "cefa.tv.storage.endpoint",
+        () -> "http://" + GARAGE.getHost() + ":" + GARAGE.getMappedPort(3900));
+    registry.add("cefa.tv.storage.access-key", () -> S3_ACCESS_KEY);
+    registry.add("cefa.tv.storage.secret-key", () -> S3_SECRET_KEY);
+    registry.add("cefa.tv.storage.bucket", () -> S3_BUCKET);
     registry.add("cefa.tv.admin.username", () -> ADMIN_USER);
     registry.add("cefa.tv.admin.password", () -> ADMIN_PASSWORD);
     registry.add("cefa.tv.jwt.secret", () -> "0123456789012345678901234567890123456789");

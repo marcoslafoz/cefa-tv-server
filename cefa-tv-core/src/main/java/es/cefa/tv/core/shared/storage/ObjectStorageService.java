@@ -13,7 +13,7 @@ import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.stereotype.Service;
 
-/** Acceso al bucket de MinIO donde se guardan los medios. */
+/** Acceso al bucket S3 (Garage) donde se guardan los medios. */
 @Service
 public class ObjectStorageService implements ApplicationRunner {
 
@@ -28,20 +28,22 @@ public class ObjectStorageService implements ApplicationRunner {
    * @param properties propiedades de la aplicación
    */
   public ObjectStorageService(CoreProperties properties) {
-    CoreProperties.Minio minio = properties.minio();
+    CoreProperties.Storage storage = properties.storage();
     this.client =
         MinioClient.builder()
-            .endpoint(minio.endpoint())
-            .credentials(minio.accessKey(), minio.secretKey())
+            .endpoint(storage.endpoint())
+            .region(storage.region())
+            .credentials(storage.accessKey(), storage.secretKey())
             .build();
-    this.bucket = minio.bucket();
+    this.bucket = storage.bucket();
   }
 
   /**
-   * Garantiza que el bucket existe al arrancar, reintentando mientras MinIO termina de iniciarse.
+   * Garantiza que el bucket existe al arrancar, reintentando mientras el almacenamiento termina de
+   * iniciarse.
    *
    * @param args argumentos de arranque
-   * @throws Exception si MinIO no responde tras los reintentos
+   * @throws Exception si el almacenamiento no responde tras los reintentos
    */
   @Override
   public void run(ApplicationArguments args) throws Exception {

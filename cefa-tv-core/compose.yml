@@ -11,14 +11,14 @@ services:
       - DB_URL=jdbc:postgresql://db:5432/${DB_NAME:-cefatv}
       - DB_USER=${DB_USER:-cefatv}
       - DB_PASSWORD=${DB_PASSWORD:-cefatv}
-      - MINIO_ENDPOINT=http://minio:9000
-      - MINIO_ACCESS_KEY=${MINIO_ACCESS_KEY:-cefatv}
-      - MINIO_SECRET_KEY=${MINIO_SECRET_KEY:-cefatv-secret}
+      - S3_ENDPOINT=http://garage:3900
+      - S3_ACCESS_KEY=${S3_ACCESS_KEY:?define S3_ACCESS_KEY en .env}
+      - S3_SECRET_KEY=${S3_SECRET_KEY:?define S3_SECRET_KEY en .env}
     depends_on:
       db:
         condition: service_healthy
-      minio:
-        condition: service_started
+      garage-init:
+        condition: service_completed_successfully
     ports:
       - '${SERVER_PORT:-8080}:8080'
     volumes:
@@ -47,19 +47,39 @@ services:
     networks:
       - internal
 
-  minio:
-    image: ${MINIO_IMAGE:-quay.io/minio/minio:latest}
-    container_name: cefa-tv-core-minio
+  garage:
+    image: ${GARAGE_IMAGE:-dxflrs/garage:v2.1.0}
+    container_name: cefa-tv-core-garage
     restart: unless-stopped
-    command: server /data --console-address ":9001"
     environment:
-      - MINIO_ROOT_USER=${MINIO_ACCESS_KEY:-cefatv}
-      - MINIO_ROOT_PASSWORD=${MINIO_SECRET_KEY:-cefatv-secret}
+      - GARAGE_RPC_SECRET=${GARAGE_RPC_SECRET:?define GARAGE_RPC_SECRET en .env}
     volumes:
-      - cefa-tv-core-minio-data:/data
+      - ./garage/garage.toml:/etc/garage.toml:ro
+      - cefa-tv-core-garage-meta:/var/lib/garage/meta
+      - cefa-tv-core-garage-data:/var/lib/garage/data
     ports:
-      - '${MINIO_API_PORT:-9000}:9000'
-      - '${MINIO_CONSOLE_PORT:-9001}:9001'
+      - '${S3_BIND_ADDRESS:-127.0.0.1}:${S3_API_PORT:-3900}:3900'
+    networks:
+      - internal
+
+  garage-init:
+    build:
+      context: ./garage
+      args:
+        GARAGE_IMAGE: ${GARAGE_IMAGE:-dxflrs/garage:v2.1.0}
+    container_name: cefa-tv-core-garage-init
+    restart: 'no'
+    environment:
+      - GARAGE_RPC_SECRET=${GARAGE_RPC_SECRET:?define GARAGE_RPC_SECRET en .env}
+      - GARAGE_CAPACITY=${GARAGE_CAPACITY:-100G}
+      - S3_ACCESS_KEY=${S3_ACCESS_KEY:?define S3_ACCESS_KEY en .env}
+      - S3_SECRET_KEY=${S3_SECRET_KEY:?define S3_SECRET_KEY en .env}
+      - S3_BUCKET=${S3_BUCKET:-cefa-tv-media}
+    volumes:
+      - ./garage/garage.toml:/etc/garage.toml:ro
+      - cefa-tv-core-garage-meta:/var/lib/garage/meta:ro
+    depends_on:
+      - garage
     networks:
       - internal
 
@@ -76,7 +96,8 @@ services:
 
 volumes:
   cefa-tv-core-db-data:
-  cefa-tv-core-minio-data:
+  cefa-tv-core-garage-meta:
+  cefa-tv-core-garage-data:
   cefa-tv-core-tmp:
 
 networks:

@@ -30,4 +30,4 @@ Ninguno por ahora. El emisor y los receptores solo hablan entre sí (ver [`archi
 
 ## Credenciales y secretos
 
-Los secretos del servidor (contraseñas de PostgreSQL y MinIO, `JWT_SECRET`, contraseña del administrador inicial y los datos del registro de Microsoft Entra ID: `AZURE_TENANT_ID`, `AZURE_CLIENT_ID` y `AZURE_CLIENT_SECRET`) viven en el fichero `.env` de cada proyecto (no versionado); la plantilla es `.env.template`. El reproductor guarda su token de dispositivo en el volumen `/data` del contenedor.
+Los secretos del servidor (contraseña de PostgreSQL, claves S3 y secreto RPC de Garage, `JWT_SECRET`, contraseña del administrador inicial y los datos del registro de Microsoft Entra ID: `AZURE_TENANT_ID`, `AZURE_CLIENT_ID` y `AZURE_CLIENT_SECRET`) viven en el fichero `.env` de cada proyecto (no versionado); la plantilla es `.env.template`. El reproductor guarda su token de dispositivo en el volumen `/data` del contenedor.

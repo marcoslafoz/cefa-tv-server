@@ -1,6 +1,6 @@
 # CEFA TV Core
 
-Backend del emisor de CEFA TV (Spring Boot 3.4, Java 21, PostgreSQL, MinIO). Gestiona la biblioteca de medios, las playlists, la programación y la entrega a los reproductores. El contrato de APIs, el protocolo y el modelo de datos están en [`../docs/llm/context/architecture.md`](../docs/llm/context/architecture.md).
+Backend del emisor de CEFA TV (Spring Boot 3.4, Java 21, PostgreSQL, Garage). Gestiona la biblioteca de medios, las playlists, la programación y la entrega a los reproductores. El contrato de APIs, el protocolo y el modelo de datos están en [`../docs/llm/context/architecture.md`](../docs/llm/context/architecture.md).
 
 ## Arranque con Docker
 
@@ -9,20 +9,21 @@ cp .env.template .env
 make up
 ```
 
-Antes de arrancar, rellena en `.env` como mínimo `JWT_SECRET` (32 caracteres o más), `ADMIN_PASSWORD`, `DB_PASSWORD` y `MINIO_SECRET_KEY`. `make up` crea la red `cefa-tv-net` y levanta cuatro contenedores:
+Antes de arrancar, rellena en `.env` como mínimo `JWT_SECRET` (32 caracteres o más), `ADMIN_PASSWORD`, `DB_PASSWORD`, `S3_ACCESS_KEY`, `S3_SECRET_KEY` y `GARAGE_RPC_SECRET`. `make up` crea la red `cefa-tv-net` y levanta cinco contenedores (el de inicialización de Garage termina al acabar):
 
 | Servicio | Función | Puerto |
 |---|---|---|
 | `app` | API del core; los reproductores se conectan aquí | `8080` |
 | `db` | PostgreSQL 16 | `127.0.0.1:5432` |
-| `minio` | Almacenamiento de objetos (API y consola) | `9000`, `9001` |
+| `garage` | Almacenamiento de objetos compatible con S3 (sin consola web) | `127.0.0.1:3900` |
+| `garage-init` | Asigna el layout, importa la clave y crea el bucket; es idempotente y termina | - |
 | `discovery` | Sidecar en red host que responde al descubrimiento UDP | `47808/udp` |
 
-La imagen de MinIO se toma de `MINIO_IMAGE` (por defecto `quay.io/minio/minio:latest`, la distribución oficial actual).
+La imagen de Garage se toma de `GARAGE_IMAGE` (por defecto `dxflrs/garage:v2.1.0`). Garage exige `S3_ACCESS_KEY` con formato `GK` + 24 hex y `S3_SECRET_KEY` y `GARAGE_RPC_SECRET` de 64 hex; se generan con `openssl rand -hex 12` y `openssl rand -hex 32`. Los datos viven en los volúmenes `cefa-tv-core-garage-meta` y `cefa-tv-core-garage-data`.
 
 ## Desarrollo local
 
-Necesita PostgreSQL y MinIO accesibles, y `ffmpeg` / `ffprobe` en el `PATH` para duración y miniaturas de vídeo (si no están, el vídeo se sube igualmente sin esos datos).
+Necesita PostgreSQL y un almacenamiento S3 (Garage) accesibles, y `ffmpeg` / `ffprobe` en el `PATH` para duración y miniaturas de vídeo (si no están, el vídeo se sube igualmente sin esos datos).
 
 ```bash
 make run
@@ -35,7 +36,8 @@ El perfil `dev` activa los logs de depuración. La documentación OpenAPI está 
 | Variable | Por defecto | Descripción |
 |---|---|---|
 | `DB_URL`, `DB_USER`, `DB_PASSWORD` | `jdbc:postgresql://localhost:5432/cefatv`, `cefatv`, `cefatv` | Conexión a PostgreSQL. |
-| `MINIO_ENDPOINT`, `MINIO_ACCESS_KEY`, `MINIO_SECRET_KEY`, `MINIO_BUCKET` | `http://localhost:9000`, `cefatv`, `cefatv-secret`, `cefa-tv-media` | Conexión a MinIO; el bucket se crea al arrancar. |
+| `S3_ENDPOINT`, `S3_ACCESS_KEY`, `S3_SECRET_KEY`, `S3_BUCKET`, `S3_REGION` | `http://localhost:3900`, sin valor, sin valor, `cefa-tv-media`, `garage` | Conexión al almacenamiento S3; el bucket lo crea `garage-init`. |
+| `GARAGE_RPC_SECRET`, `GARAGE_CAPACITY`, `GARAGE_IMAGE`, `S3_API_PORT`, `S3_BIND_ADDRESS` | sin valor, `100G`, `dxflrs/garage:v2.1.0`, `3900`, `127.0.0.1` | Garage: secreto RPC, capacidad del layout, imagen y publicación de la API S3. |
 | `JWT_SECRET` | sin valor útil | Secreto de firma de la sesión (32 caracteres o más). |
 | `COOKIE_SECURE` | `false` | Pon `true` si se sirve por HTTPS. |
 | `ADMIN_USERNAME`, `ADMIN_PASSWORD` | vacíos | Crean el primer administrador si no hay usuarios. |
@@ -67,7 +69,7 @@ El código vive en `es.cefa.tv.core` organizado por dominio: `auth`, `microsoft`
 make test
 ```
 
-Las pruebas de integración usan Testcontainers (PostgreSQL y MinIO) y se saltan si no hay Docker. El plugin de Surefire fija `api.version=1.44` para que docker-java hable con Docker Engine 29. La imagen de MinIO de las pruebas se cambia con `-Dtest.minio.image=...`.
+Las pruebas de integración usan Testcontainers (PostgreSQL y Garage) y se saltan si no hay Docker. El plugin de Surefire fija `api.version=1.44` para que docker-java hable con Docker Engine 29. La imagen de Garage de las pruebas se cambia con `-Dtest.garage.image=...`.
 
 ## Inicio de sesión con Microsoft (híbrido)
 

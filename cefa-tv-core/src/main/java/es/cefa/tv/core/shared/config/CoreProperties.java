@@ -9,7 +9,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
  * @param publicUrl URL del core visible por los reproductores (opcional)
  * @param jwt configuración de la sesión de administración
  * @param admin credenciales del administrador inicial
- * @param minio configuración del almacenamiento de objetos
+ * @param storage configuración del almacenamiento de objetos
  * @param media configuración del procesado de medios
  * @param manifest configuración del cálculo de manifests
  * @param player configuración de la relación con los reproductores
@@ -23,7 +23,7 @@ public record CoreProperties(
     String publicUrl,
     Jwt jwt,
     Admin admin,
-    Minio minio,
+    Storage storage,
     Media media,
     Manifest manifest,
     Player player,
@@ -49,14 +49,16 @@ public record CoreProperties(
   public record Admin(String username, String password) {}
 
   /**
-   * Conexión con MinIO.
+   * Conexión con el almacenamiento de objetos compatible con S3 (Garage).
    *
-   * @param endpoint URL de la API S3 de MinIO
+   * @param endpoint URL de la API S3
    * @param accessKey clave de acceso
    * @param secretKey clave secreta
    * @param bucket bucket donde se guardan los medios
+   * @param region región S3 con la que se firman las peticiones ({@code garage} en Garage)
    */
-  public record Minio(String endpoint, String accessKey, String secretKey, String bucket) {}
+  public record Storage(
+      String endpoint, String accessKey, String secretKey, String bucket, String region) {}
 
   /**
    * Procesado de medios.
