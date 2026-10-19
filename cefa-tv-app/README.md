@@ -19,6 +19,8 @@ pnpm install
 pnpm dev
 ```
 
+En `.env.local` descomenta `CORE_API_URL` y la línea de desarrollo de `NEXT_PUBLIC_CORE_WS_URL` (hay que borrar la línea vacía de arriba o dejar la de desarrollo después). En Docker el archivo se copia a `.env` tal cual y esa variable debe quedar vacía.
+
 La aplicación escucha en `http://localhost:3000`. Necesita el core en `http://localhost:8080` (`CORE_API_URL`). El WebSocket del control remoto no pasa por los rewrites de Next.js: en desarrollo usa `NEXT_PUBLIC_CORE_WS_URL=ws://localhost:8080`; en producción nginx lo sirve en el mismo origen (`/core-api/ws/...`) y la variable se deja vacía.
 
 ## Comandos (`Makefile`)
