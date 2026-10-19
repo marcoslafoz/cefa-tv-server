@@ -46,7 +46,11 @@ public class Player {
   @Column(nullable = false)
   private PlayerStatus status;
 
-  @Column(name = "device_token_hash", nullable = false, unique = true)
+  @Enumerated(EnumType.STRING)
+  @Column(nullable = false)
+  private PlayerKind kind = PlayerKind.CEFA_TV;
+
+  @Column(name = "device_token_hash", unique = true)
   private String deviceTokenHash;
 
   private String hostname;

@@ -63,6 +63,22 @@ cefa:
       secret-key: ${S3_SECRET_KEY:}
       bucket: ${S3_BUCKET:cefa-tv-media}
       region: ${S3_REGION:garage}
+    aracast:
+      command-port: ${ARACAST_COMMAND_PORT:5401}
+      command-timeout-ms: ${ARACAST_COMMAND_TIMEOUT_MS:10000}
+      ftp-port: ${ARACAST_FTP_PORT:5481}
+      ftp-user: ${ARACAST_FTP_USER:user}
+      ftp-password: ${ARACAST_FTP_PASSWORD:}
+      ftp-timeout-ms: ${ARACAST_FTP_TIMEOUT_MS:600000}
+      ssh-user: ${ARACAST_SSH_USER:root}
+      ssh-passwords: ${ARACAST_SSH_PASSWORDS:}
+      ssh-timeout-ms: ${ARACAST_SSH_TIMEOUT_MS:10000}
+      secret-key: ${ARACAST_SECRET_KEY:}
+      ntp-servers: ${ARACAST_NTP_SERVERS:10.21.34.10,10.21.35.2}
+      discovery:
+        port: ${ARACAST_DISCOVERY_PORT:30333}
+        wait-ms: ${ARACAST_DISCOVERY_WAIT_MS:1500}
+        max-hosts: ${ARACAST_DISCOVERY_MAX_HOSTS:2048}
     media:
       ffmpeg-path: ${FFMPEG_PATH:ffmpeg}
       ffprobe-path: ${FFPROBE_PATH:ffprobe}
@@ -75,6 +91,7 @@ cefa:
       online-window-sec: 90
       never-connected-flag-days: ${NEVER_CONNECTED_FLAG_DAYS:7}
       never-connected-delete-days: ${NEVER_CONNECTED_DELETE_DAYS:14}
+      repo-url: ${PLAYER_REPO_URL:https://github.com/marcoslafoz/cefa-tv-player.git}
     shell:
       idle-timeout-sec: 900
       max-duration-sec: 7200

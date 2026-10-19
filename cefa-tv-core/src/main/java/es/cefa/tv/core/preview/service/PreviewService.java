@@ -28,6 +28,7 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.web.socket.BinaryMessage;
@@ -74,6 +75,7 @@ public class PreviewService {
   private final PlayerSessionRegistry registry;
   private final PlayerRepository players;
   private final ObjectMapper objectMapper;
+  private final ApplicationEventPublisher events;
   private final Counter acceptedFrames;
   private final Counter droppedFrames;
   private final Map<String, Subscriber> subscribers = new ConcurrentHashMap<>();
@@ -103,16 +105,19 @@ public class PreviewService {
    * @param registry registro de conexiones de reproductores
    * @param players reproductores
    * @param objectMapper serializador JSON
+   * @param events publicador de eventos, para los reproductores que no usan WebSocket
    * @param meters registro de métricas
    */
   public PreviewService(
       PlayerSessionRegistry registry,
       PlayerRepository players,
       ObjectMapper objectMapper,
+      ApplicationEventPublisher events,
       MeterRegistry meters) {
     this.registry = registry;
     this.players = players;
     this.objectMapper = objectMapper;
+    this.events = events;
     this.acceptedFrames = meters.counter("cefatv.preview.frames", "result", "relayed");
     this.droppedFrames = meters.counter("cefatv.preview.frames", "result", "dropped");
     meters.gauge("cefatv.preview.subscribers", subscribers, Map::size);
@@ -296,9 +301,11 @@ public class PreviewService {
     if (wanted == null && current != null) {
       requestedIntervals.remove(playerId);
       registry.sendToPlayer(playerId, STOP_MESSAGE);
+      events.publishEvent(new PreviewDemandEvent(playerId, null));
     } else if (wanted != null && !wanted.equals(current)) {
       requestedIntervals.put(playerId, wanted);
       registry.sendToPlayer(playerId, startMessage(wanted));
+      events.publishEvent(new PreviewDemandEvent(playerId, wanted));
     }
   }
 

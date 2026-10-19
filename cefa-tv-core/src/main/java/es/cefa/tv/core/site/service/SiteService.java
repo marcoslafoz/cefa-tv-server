@@ -10,6 +10,7 @@ import es.cefa.tv.core.player.service.PlayerPresence;
 import es.cefa.tv.core.schedule.repository.ScheduleRepository;
 import es.cefa.tv.core.shared.event.ContentChangedEvent;
 import es.cefa.tv.core.shared.exception.ApiException;
+import es.cefa.tv.core.shared.util.Ipv4Range;
 import es.cefa.tv.core.site.dto.SiteRequest;
 import es.cefa.tv.core.site.dto.SiteResponse;
 import es.cefa.tv.core.site.model.Site;
@@ -178,6 +179,31 @@ public class SiteService {
     site.setCity(blankToNull(request.city()));
     site.setCountry(blankToNull(request.country()));
     site.setTimezone(timezone(request.timezone()));
+    site.setIpRanges(ipRanges(request.ipRanges()));
+  }
+
+  /** Valida los rangos de direcciones y descarta los vacíos y los repetidos. */
+  private static List<String> ipRanges(List<String> raw) {
+    if (raw == null) {
+      return null;
+    }
+    List<String> ranges = new java.util.ArrayList<>();
+    for (String range : raw) {
+      if (range == null || range.isBlank()) {
+        continue;
+      }
+      String clean = range.trim();
+      try {
+        Ipv4Range.parse(clean);
+      } catch (IllegalArgumentException e) {
+        throw ApiException.badRequest(
+            "INVALID_IP_RANGE", "Rango de direcciones no válido: " + clean);
+      }
+      if (!ranges.contains(clean)) {
+        ranges.add(clean);
+      }
+    }
+    return ranges.isEmpty() ? null : ranges;
   }
 
   /** Valida una zona horaria IANA; vacía significa la por defecto. */
@@ -217,6 +243,7 @@ public class SiteService {
         site.getCity(),
         site.getCountry(),
         site.getTimezone(),
+        site.getIpRanges() == null ? List.of() : site.getIpRanges(),
         visible.size(),
         visible.stream().filter(presence::isOnline).count(),
         site.getCreatedAt());

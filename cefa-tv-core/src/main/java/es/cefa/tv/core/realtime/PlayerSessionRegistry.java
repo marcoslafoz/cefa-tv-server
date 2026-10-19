@@ -2,10 +2,13 @@ package es.cefa.tv.core.realtime;
 
 import java.io.IOException;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.web.socket.BinaryMessage;
@@ -27,6 +30,22 @@ public class PlayerSessionRegistry {
   private final Map<UUID, Set<WebSocketSession>> viewers = new ConcurrentHashMap<>();
   private final Map<UUID, Set<String>> remoteStarters = new ConcurrentHashMap<>();
   private final Map<UUID, String> remoteParams = new ConcurrentHashMap<>();
+  private final ObjectProvider<VirtualPlayerBridge> bridges;
+
+  /** Crea el registro sin puentes para reproductores virtuales. */
+  public PlayerSessionRegistry() {
+    this(null);
+  }
+
+  /**
+   * Crea el registro.
+   *
+   * @param bridges puentes de reproductores que no abren un WebSocket propio
+   */
+  @Autowired
+  public PlayerSessionRegistry(ObjectProvider<VirtualPlayerBridge> bridges) {
+    this.bridges = bridges;
+  }
 
   /**
    * Registra la conexión de un reproductor y cierra la anterior si existía.
@@ -66,7 +85,10 @@ public class PlayerSessionRegistry {
    */
   public boolean isConnected(UUID playerId) {
     WebSocketSession session = players.get(playerId);
-    return session != null && session.isOpen();
+    if (session != null && session.isOpen()) {
+      return true;
+    }
+    return bridgeFor(playerId).map(bridge -> bridge.isOnline(playerId)).orElse(false);
   }
 
   /**
@@ -79,6 +101,11 @@ public class PlayerSessionRegistry {
   public boolean sendToPlayer(UUID playerId, String json) {
     WebSocketSession session = players.get(playerId);
     if (session == null || !session.isOpen()) {
+      Optional<VirtualPlayerBridge> bridge = bridgeFor(playerId);
+      if (bridge.isPresent()) {
+        bridge.get().onMessage(playerId, json);
+        return true;
+      }
       return false;
     }
     try {
@@ -239,6 +266,14 @@ public class PlayerSessionRegistry {
         log.debug("Envío fallido al visor {}", session.getId());
       }
     }
+  }
+
+  /** Busca el puente que atiende a un reproductor virtual, si lo hay. */
+  private Optional<VirtualPlayerBridge> bridgeFor(UUID playerId) {
+    if (bridges == null) {
+      return Optional.empty();
+    }
+    return bridges.orderedStream().filter(bridge -> bridge.handles(playerId)).findFirst();
   }
 
   /** Cierra una sesión sin propagar errores. */

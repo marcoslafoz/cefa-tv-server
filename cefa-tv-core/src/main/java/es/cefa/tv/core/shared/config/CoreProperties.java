@@ -86,12 +86,15 @@ public record CoreProperties(
    *     conectado se marca como tal
    * @param neverConnectedDeleteDays días desde el alta tras los que se elimina un reproductor que
    *     nunca se ha conectado
+   * @param repoUrl dirección del repositorio git del reproductor, que se muestra en las
+   *     instrucciones de instalación
    */
   public record Player(
       int pollIntervalSec,
       int onlineWindowSec,
       int neverConnectedFlagDays,
-      int neverConnectedDeleteDays) {}
+      int neverConnectedDeleteDays,
+      String repoUrl) {}
 
   /**
    * Terminal remota.

@@ -36,4 +36,7 @@ public class StoredFile {
 
   @Column(nullable = false)
   private String name;
+
+  @Column(length = 40)
+  private String sha1;
 }

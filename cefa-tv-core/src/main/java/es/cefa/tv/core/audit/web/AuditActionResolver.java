@@ -66,7 +66,8 @@ public final class AuditActionResolver {
       Map.of(
           "POST users/{id}/password", "USER_PASSWORD_RESET",
           "POST media/web", "MEDIA_CREATE_WEB",
-          "POST auth/password", "AUTH_PASSWORD_CHANGE");
+          "POST auth/password", "AUTH_PASSWORD_CHANGE",
+          "POST players/aracast", "PLAYER_ARACAST_CREATE");
 
   /** Evita la instanciación de la clase de utilidades. */
   private AuditActionResolver() {}

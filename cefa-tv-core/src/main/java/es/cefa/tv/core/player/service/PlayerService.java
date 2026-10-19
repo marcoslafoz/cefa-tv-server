@@ -1,5 +1,6 @@
 package es.cefa.tv.core.player.service;
 
+import es.cefa.tv.core.aracast.service.AracastCommandService;
 import es.cefa.tv.core.authorization.model.AccessLevel;
 import es.cefa.tv.core.authorization.model.Permission;
 import es.cefa.tv.core.authorization.service.AccessService;
@@ -15,6 +16,7 @@ import es.cefa.tv.core.player.model.CommandType;
 import es.cefa.tv.core.player.model.IdleLogo;
 import es.cefa.tv.core.player.model.Player;
 import es.cefa.tv.core.player.model.PlayerConfig;
+import es.cefa.tv.core.player.model.PlayerKind;
 import es.cefa.tv.core.player.repository.PlayerRepository;
 import es.cefa.tv.core.playlist.repository.PlaylistRepository;
 import es.cefa.tv.core.preview.service.PreviewService;
@@ -55,6 +57,7 @@ public class PlayerService {
   private final SiteRepository sites;
   private final MediaAssetRepository assets;
   private final PreviewService previews;
+  private final AracastCommandService aracastCommands;
 
   /**
    * Lista los reproductores visibles, de una sede o de todas.
@@ -144,7 +147,9 @@ public class PlayerService {
   @Transactional
   public void delete(UUID id) {
     Player player = find(id);
-    if (sessions.isConnected(id)) {
+    if (player.getKind() == PlayerKind.ARACAST) {
+      aracastCommands.forget(id);
+    } else if (sessions.isConnected(id)) {
       commandService.send(id, CommandType.UNENROLL);
       sessions.disconnectPlayer(id);
     }
@@ -171,7 +176,11 @@ public class PlayerService {
    */
   @Transactional
   public void command(UUID id, CommandType type) {
-    find(id);
+    Player player = find(id);
+    if (player.getKind() == PlayerKind.ARACAST) {
+      aracastCommands.execute(id, type);
+      return;
+    }
     commandService.send(id, type);
   }
 
@@ -264,7 +273,8 @@ public class PlayerService {
         player.getCreatedAt(),
         isNeverConnected(player),
         previews.previewAt(player.getId()),
-        player.getCurrentAssetId() == null ? null : thumbnails.get(player.getCurrentAssetId()));
+        player.getCurrentAssetId() == null ? null : thumbnails.get(player.getCurrentAssetId()),
+        player.getKind());
   }
 
   /**

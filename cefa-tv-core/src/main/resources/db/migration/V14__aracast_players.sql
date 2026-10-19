@@ -1,0 +1,10 @@
+ALTER TABLE players ADD COLUMN kind VARCHAR(20) NOT NULL DEFAULT 'CEFA_TV';
+ALTER TABLE players ALTER COLUMN device_token_hash DROP NOT NULL;
+
+CREATE TABLE aracast_players (
+    player_id UUID PRIMARY KEY REFERENCES players (id) ON DELETE CASCADE,
+    host VARCHAR(255) NOT NULL UNIQUE,
+    mac VARCHAR(17),
+    model VARCHAR(100),
+    created_at TIMESTAMPTZ NOT NULL
+);

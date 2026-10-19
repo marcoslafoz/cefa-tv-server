@@ -9,6 +9,7 @@ import es.cefa.tv.core.player.dto.PlayerResponse;
 import es.cefa.tv.core.player.dto.PlayerUpdateRequest;
 import es.cefa.tv.core.player.model.CommandType;
 import es.cefa.tv.core.player.service.PlayerService;
+import es.cefa.tv.core.shared.config.CoreProperties;
 import jakarta.validation.Valid;
 import java.util.List;
 import java.util.UUID;
@@ -32,6 +33,29 @@ import org.springframework.web.bind.annotation.RestController;
 public class PlayerController {
 
   private final PlayerService playerService;
+  private final CoreProperties properties;
+
+  /**
+   * Instrucciones para instalar el reproductor en una pantalla, con la dirección del repositorio
+   * configurada en {@code PLAYER_REPO_URL}.
+   *
+   * @return dirección del repositorio y comando de instalación
+   */
+  @RequiresPermission(Permission.PLAYER_MANAGE)
+  @GetMapping("/install")
+  public PlayerInstallInfo install() {
+    String repo = properties.player().repoUrl();
+    return new PlayerInstallInfo(
+        repo, "git clone " + repo + " cefa-tv-player && cd cefa-tv-player && sudo ./install.sh");
+  }
+
+  /**
+   * Instrucciones de instalación del reproductor.
+   *
+   * @param repoUrl dirección del repositorio git
+   * @param command comando que se ejecuta en la pantalla
+   */
+  public record PlayerInstallInfo(String repoUrl, String command) {}
 
   /**
    * Lista los reproductores visibles, de una sede o de todas.

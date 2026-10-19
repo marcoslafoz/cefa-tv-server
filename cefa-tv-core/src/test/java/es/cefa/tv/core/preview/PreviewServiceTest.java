@@ -60,6 +60,7 @@ class PreviewServiceTest {
   private PlayerSessionRegistry registry;
   private PlayerRepository players;
   private PreviewService service;
+  private org.springframework.context.ApplicationEventPublisher events;
 
   @BeforeEach
   void setUp() {
@@ -72,7 +73,10 @@ class PreviewServiceTest {
               player.setId(invocation.getArgument(0));
               return Optional.of(player);
             });
-    service = new PreviewService(registry, players, new ObjectMapper(), new SimpleMeterRegistry());
+    events = org.mockito.Mockito.mock(org.springframework.context.ApplicationEventPublisher.class);
+    service =
+        new PreviewService(
+            registry, players, new ObjectMapper(), events, new SimpleMeterRegistry());
   }
 
   private WebSocketSession session(String id) {

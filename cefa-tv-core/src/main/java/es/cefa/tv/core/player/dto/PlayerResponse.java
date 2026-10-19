@@ -2,6 +2,7 @@ package es.cefa.tv.core.player.dto;
 
 import es.cefa.tv.core.player.model.IdleLogo;
 import es.cefa.tv.core.player.model.IdleLogoSource;
+import es.cefa.tv.core.player.model.PlayerKind;
 import es.cefa.tv.core.player.model.PlayerStatus;
 import java.time.Instant;
 import java.util.List;
@@ -51,6 +52,7 @@ import java.util.UUID;
  *     nunca, señal de un emparejamiento huérfano
  * @param previewAt instante de la última vista previa guardada, o {@code null} si no hay
  * @param currentAssetThumbnailUrl miniatura del medio que está sonando, o {@code null}
+ * @param kind tipo de dispositivo
  */
 public record PlayerResponse(
     UUID id,
@@ -88,4 +90,5 @@ public record PlayerResponse(
     Instant createdAt,
     boolean neverConnected,
     Instant previewAt,
-    String currentAssetThumbnailUrl) {}
+    String currentAssetThumbnailUrl,
+    PlayerKind kind) {}

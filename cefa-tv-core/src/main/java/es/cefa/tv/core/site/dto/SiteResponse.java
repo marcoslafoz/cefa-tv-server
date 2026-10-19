@@ -1,6 +1,7 @@
 package es.cefa.tv.core.site.dto;
 
 import java.time.Instant;
+import java.util.List;
 import java.util.UUID;
 
 /**
@@ -13,6 +14,7 @@ import java.util.UUID;
  * @param city ciudad
  * @param country país
  * @param timezone zona horaria IANA
+ * @param ipRanges rangos de direcciones de la sede, vacío si no tiene
  * @param playerCount reproductores de la sede que ve el usuario
  * @param onlineCount de ellos, los que están en línea
  * @param createdAt fecha de creación
@@ -25,6 +27,7 @@ public record SiteResponse(
     String city,
     String country,
     String timezone,
+    List<String> ipRanges,
     long playerCount,
     long onlineCount,
     Instant createdAt) {}

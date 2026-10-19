@@ -1,6 +1,7 @@
 package es.cefa.tv.core.player.repository;
 
 import es.cefa.tv.core.player.model.Player;
+import es.cefa.tv.core.player.model.PlayerKind;
 import es.cefa.tv.core.player.model.PlayerStatus;
 import jakarta.persistence.LockModeType;
 import java.time.Instant;
@@ -48,6 +49,15 @@ public interface PlayerRepository extends JpaRepository<Player, UUID> {
    * @return los reproductores
    */
   List<Player> findByStatus(PlayerStatus status);
+
+  /**
+   * Lista los reproductores de un tipo y estado.
+   *
+   * @param kind tipo de dispositivo
+   * @param status estado administrativo
+   * @return los reproductores
+   */
+  List<Player> findByKindAndStatus(PlayerKind kind, PlayerStatus status);
 
   /**
    * Lista los reproductores de una sede.

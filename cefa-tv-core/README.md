@@ -21,6 +21,12 @@ Antes de arrancar, rellena en `.env` como mínimo `JWT_SECRET` (32 caracteres o 
 
 La imagen de Garage se toma de `GARAGE_IMAGE` (por defecto `dxflrs/garage:v2.1.0`). Garage exige `S3_ACCESS_KEY` con formato `GK` + 24 hex y `S3_SECRET_KEY` y `GARAGE_RPC_SECRET` de 64 hex; se generan con `openssl rand -hex 12` y `openssl rand -hex 32`. Los datos viven en los volúmenes `cefa-tv-core-garage-meta` y `cefa-tv-core-garage-data`.
 
+## Reproductores Aracast
+
+Los players Aracast (Aranova) se gestionan como un tipo más de reproductor: se dan de alta por IP desde Añadir reproductor o con la búsqueda por rangos de una sede, se programan con las mismas playlists y programaciones, y se ven, controlan y reinician igual. El servidor empuja a cada player plantillas y un `events.ics` por TCP 5401, FTP 5481 y SSH, así que el servidor tiene que llegar a esos puertos. Cómo se traduce una programación, los endpoints y las variables están en [`architecture.md`](../docs/llm/context/architecture.md#reproductores-aracast); el plan y el estado, en [`aracast.md`](../docs/llm/tasks/aracast.md).
+
+Cada Aracast puede tener sus propias contraseñas SSH y FTP (se escriben al darlo de alta o en su ficha y se guardan cifradas); `ARACAST_SSH_PASSWORDS` y `ARACAST_FTP_PASSWORD` son el respaldo para los que no tengan una propia. Para descubrir players hay que definir los rangos de direcciones de la sede (`ipRanges`). Aviso: el player trata los nombres de plantilla como patrones, por eso CEFA TV los sanea y les añade la marca `~ctv-...`; no renombres a mano plantillas con esa marca.
+
 ## Desarrollo local
 
 Necesita PostgreSQL y un almacenamiento S3 (Garage) accesibles, y `ffmpeg` / `ffprobe` en el `PATH` para duración y miniaturas de vídeo (si no están, el vídeo se sube igualmente sin esos datos).

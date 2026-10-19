@@ -25,6 +25,7 @@
     <testcontainers.version>1.21.3</testcontainers.version>
     <minio.version>8.5.14</minio.version>
     <pdfbox.version>3.0.3</pdfbox.version>
+    <commons-net.version>3.11.1</commons-net.version>
   </properties>
 
   <dependencies>
@@ -97,6 +98,18 @@
       <groupId>org.apache.pdfbox</groupId>
       <artifactId>pdfbox</artifactId>
       <version>${pdfbox.version}</version>
+    </dependency>
+
+    <dependency>
+      <groupId>com.github.mwiede</groupId>
+      <artifactId>jsch</artifactId>
+      <version>0.2.20</version>
+    </dependency>
+
+    <dependency>
+      <groupId>commons-net</groupId>
+      <artifactId>commons-net</artifactId>
+      <version>${commons-net.version}</version>
     </dependency>
 
     <dependency>
