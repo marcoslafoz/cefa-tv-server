@@ -37,6 +37,7 @@ Terminado el 19 de octubre de 2026 y desplegado en `10.21.35.133`.
 
 ## Límites conocidos
 
-- Una pantalla sin cambio de plantilla por debajo de 1 s no se puede emitir; una programación que necesite más de 3000 cambios de plantilla se rechaza con un mensaje.
-- El player corta 30 s cada medianoche con el logo (`23:59:30`), igual que con la aplicación de escritorio.
+- Los ciclos de plantillas (playlists que mezclan tipos) solo se publican para las próximas tres horas y se regeneran cada 30 minutos; si el servidor dejara de publicar más de un par de horas, el player pasaría a la pantalla en reposo. Las playlists de un solo tipo se publican para siete días y se repiten cada semana.
+- Los eventos de repetición corta (`FREQ=SECONDLY`) cuelgan al player, que calcula las repeticiones desde el año 2000: no se usan.
+- Cada medianoche el player muestra 30 s la pantalla en reposo (`23:59:30`), como con la aplicación de escritorio.
 - El banco de pruebas no tiene pantalla conectada, por lo que la pantalla en vivo y la vista previa no se han podido probar sobre un monitor real.
