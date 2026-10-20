@@ -178,6 +178,12 @@ public class AracastBridge implements VirtualPlayerBridge {
             registry.broadcastBinary(playerId, ByteBuffer.wrap(frame.get().jpeg()));
           }
         } catch (AracastException e) {
+          log.warn(
+              "Captura fallida del Aracast {} ({} de {}): {}",
+              host,
+              failures + 1,
+              MAX_RETRIES + 1,
+              e.getMessage());
           if (++failures > MAX_RETRIES) {
             registry.broadcastText(playerId, "{\"type\":\"STATE\",\"online\":false}");
             return;

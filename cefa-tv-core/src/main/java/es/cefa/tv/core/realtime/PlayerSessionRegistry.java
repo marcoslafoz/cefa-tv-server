@@ -263,7 +263,11 @@ public class PlayerSessionRegistry {
           action.run(session);
         }
       } catch (IOException | RuntimeException e) {
-        log.debug("Envío fallido al visor {}", session.getId());
+        log.warn(
+            "Envío fallido al visor {} del reproductor {}: {}",
+            session.getId(),
+            playerId,
+            e.toString());
       }
     }
   }
