@@ -20,6 +20,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
@@ -45,6 +46,7 @@ public class AracastBridge implements VirtualPlayerBridge {
   private final PlayerSessionRegistry registry;
   private final ShellSessionService shellSessions;
   private final ObjectMapper mapper;
+  private final ApplicationEventPublisher events;
   private final Map<UUID, String> hosts = new ConcurrentHashMap<>();
   private final Map<UUID, Instant> seen = new ConcurrentHashMap<>();
   private final Map<UUID, Stream> streams = new ConcurrentHashMap<>();
@@ -62,6 +64,7 @@ public class AracastBridge implements VirtualPlayerBridge {
    * @param registry registro de sesiones, por donde se responde a los visores
    * @param shellSessions sesiones de terminal, a las que se entrega la salida
    * @param mapper serializador JSON
+   * @param events publicador de eventos, para avisar de que se abre o se cierra una sesión
    */
   public AracastBridge(
       AracastPlayerRepository aracasts,
@@ -69,13 +72,15 @@ public class AracastBridge implements VirtualPlayerBridge {
       AracastShellService shells,
       PlayerSessionRegistry registry,
       @Lazy ShellSessionService shellSessions,
-      ObjectMapper mapper) {
+      ObjectMapper mapper,
+      ApplicationEventPublisher events) {
     this.aracasts = aracasts;
     this.screens = screens;
     this.shells = shells;
     this.registry = registry;
     this.shellSessions = shellSessions;
     this.mapper = mapper;
+    this.events = events;
   }
 
   @Override
@@ -156,6 +161,7 @@ public class AracastBridge implements VirtualPlayerBridge {
     if (streams.putIfAbsent(playerId, stream) != null) {
       return;
     }
+    events.publishEvent(new AracastRemoteSessionEvent(playerId, true));
     streaming.submit(() -> stream(playerId, host, stream));
   }
 
@@ -184,6 +190,7 @@ public class AracastBridge implements VirtualPlayerBridge {
     } finally {
       streams.remove(playerId, stream);
       screens.stop(host);
+      events.publishEvent(new AracastRemoteSessionEvent(playerId, false));
     }
   }
 

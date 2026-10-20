@@ -23,6 +23,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
+import org.springframework.context.ApplicationEventPublisher;
 
 class AracastBridgeTest {
 
@@ -33,6 +34,7 @@ class AracastBridgeTest {
   private AracastShellService shells;
   private PlayerSessionRegistry registry;
   private ShellSessionService shellSessions;
+  private ApplicationEventPublisher events;
   private AracastBridge bridge;
   private AracastPlayerRepository aracasts;
 
@@ -47,8 +49,10 @@ class AracastBridgeTest {
     shells = mock(AracastShellService.class);
     registry = mock(PlayerSessionRegistry.class);
     shellSessions = mock(ShellSessionService.class);
+    events = mock(ApplicationEventPublisher.class);
     bridge =
-        new AracastBridge(aracasts, screens, shells, registry, shellSessions, new ObjectMapper());
+        new AracastBridge(
+            aracasts, screens, shells, registry, shellSessions, new ObjectMapper(), events);
   }
 
   @AfterEach
@@ -85,6 +89,17 @@ class AracastBridgeTest {
     verify(registry, timeout(3000)).broadcastBinary(eq(id), frame.capture());
     assertThat(frame.getValue().remaining()).isEqualTo(3);
     verify(screens, timeout(3000)).stop(HOST);
+  }
+
+  @Test
+  void aRemoteSessionAnnouncesItsStartAndItsEnd() {
+    when(registry.hasViewers(id)).thenReturn(true, false);
+    when(screens.frame(eq(HOST), anyLong())).thenReturn(Optional.empty());
+
+    bridge.onMessage(id, "{\"type\":\"REMOTE_START\"}");
+
+    verify(events).publishEvent(new AracastRemoteSessionEvent(id, true));
+    verify(events, timeout(3000)).publishEvent(new AracastRemoteSessionEvent(id, false));
   }
 
   @Test

@@ -80,6 +80,42 @@ public class AracastPublisher {
     return locks.withLock(host, () -> publishLocked(host, plan, zone));
   }
 
+  /**
+   * Congela el calendario del player en la plantilla que está emitiendo: un solo evento de todo el
+   * día con ella, sin instalar ni borrar plantillas. Sirve para que una sesión de control remoto no
+   * vea cambiar la página; después se vuelve a publicar el plan real.
+   *
+   * @param host IP o nombre del player
+   * @return nombre de la plantilla en la que queda congelado
+   */
+  public String hold(String host) {
+    return locks.withLock(
+        host,
+        () -> {
+          String current = query.getStatus(host).currentTemplate();
+          if (current == null || current.isBlank()) {
+            throw new AracastException("El player " + host + " no informa de su plantilla actual");
+          }
+          IcsSchedule schedule =
+              new IcsSchedule(
+                  SCHEDULE_NAME,
+                  List.of(
+                      new IcsEntry(
+                          current, LocalTime.MIDNIGHT, LocalTime.of(23, 59, 30), List.of())),
+                  0);
+          String events = ics.encode(schedule);
+          withLock(
+              host,
+              () -> {
+                ftp.upload(host, EVENTS_FILE, stream(events.getBytes(StandardCharsets.UTF_8)));
+                commands.send(host, "Player.loadEvents");
+                commands.send(host, "Player.updateEvents");
+              });
+          log.info("Calendario de {} congelado en {}", host, current);
+          return current;
+        });
+  }
+
   private Result publishLocked(String host, AracastPlan plan, ZoneId zone) {
     Path work = createWorkDir();
     try {

@@ -8,6 +8,7 @@ import es.cefa.tv.core.aracast.model.AracastPlayer;
 import es.cefa.tv.core.aracast.plan.AracastPlan;
 import es.cefa.tv.core.aracast.plan.AracastPlanner;
 import es.cefa.tv.core.aracast.plan.UnsupportedPlaylistException;
+import es.cefa.tv.core.aracast.remote.AracastRemoteSessionEvent;
 import es.cefa.tv.core.aracast.repository.AracastPlayerRepository;
 import es.cefa.tv.core.aracast.service.AracastPlayerService;
 import es.cefa.tv.core.audit.model.AuditOutcome;
@@ -37,6 +38,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.event.EventListener;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.event.TransactionPhase;
@@ -65,6 +67,10 @@ public class AracastDeliveryService {
   private static final Duration FAILURE_RETRY = Duration.ofMinutes(10);
   private static final Duration REFRESH_EVERY = Duration.ofHours(1);
   private static final Duration REFRESH_ROLLING = Duration.ofMinutes(30);
+  private static final Duration HOLD_RELEASE_GRACE = Duration.ofSeconds(10);
+  private static final Duration HOLD_MAX = Duration.ofHours(1);
+  private static final int HOLD_WAIT_STEPS = 60;
+  private static final long HOLD_WAIT_MILLIS = 500;
   private static final int REACHABLE_TIMEOUT_MS = 3000;
   private static final int PARALLELISM = 4;
   private static final int MESSAGE_LIMIT = 500;
@@ -85,6 +91,8 @@ public class AracastDeliveryService {
   private final Map<UUID, Instant> lastChecked = new ConcurrentHashMap<>();
   private final Map<UUID, Boolean> rolling = new ConcurrentHashMap<>();
   private final Map<UUID, String> lastFailure = new ConcurrentHashMap<>();
+  private final Map<UUID, Hold> holds = new ConcurrentHashMap<>();
+  private final Set<UUID> sessions = ConcurrentHashMap.newKeySet();
 
   /** Busca los Aracast con algo que entregar y lanza cada entrega en segundo plano. */
   @Scheduled(fixedDelay = 5000, initialDelay = 15_000)
@@ -93,6 +101,62 @@ public class AracastDeliveryService {
       if (isDue(player) && running.add(player.getId())) {
         executor.submit(() -> run(player.getId()));
       }
+    }
+  }
+
+  /**
+   * Congela el calendario de un Aracast mientras alguien lo controla en remoto, para que la página
+   * que se maneja no se sustituya por la siguiente de la playlist, y lo libera 10 segundos después
+   * de cerrar la sesión. No se congela un player en el que CEFA TV nunca ha publicado.
+   *
+   * @param event apertura o cierre de una sesión de control remoto
+   */
+  @EventListener
+  public void onRemoteSession(AracastRemoteSessionEvent event) {
+    UUID playerId = event.playerId();
+    if (event.active()) {
+      sessions.add(playerId);
+      executor.submit(() -> hold(playerId));
+    } else {
+      sessions.remove(playerId);
+      release(playerId);
+    }
+  }
+
+  private void release(UUID playerId) {
+    holds.computeIfPresent(
+        playerId, (id, hold) -> hold.releasedAt(Instant.now().plus(HOLD_RELEASE_GRACE)));
+  }
+
+  private void hold(UUID playerId) {
+    try {
+      AracastPlayer aracast = aracasts.findById(playerId).orElse(null);
+      if (aracast == null || aracast.getPublishedHash() == null || !sessions.contains(playerId)) {
+        return;
+      }
+      Hold current = holds.get(playerId);
+      if (current != null && current.releaseAt() == null) {
+        return;
+      }
+      holds.put(playerId, new Hold(Instant.now(), null));
+      awaitDelivery(playerId);
+      publisher.hold(aracast.getHost());
+      playerService.recordHeld(playerId);
+      if (!sessions.contains(playerId)) {
+        release(playerId);
+      }
+    } catch (RuntimeException e) {
+      log.warn("No se pudo congelar el calendario del Aracast {}: {}", playerId, e.getMessage());
+      holds.remove(playerId);
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      holds.remove(playerId);
+    }
+  }
+
+  private void awaitDelivery(UUID playerId) throws InterruptedException {
+    for (int i = 0; i < HOLD_WAIT_STEPS && running.contains(playerId); i++) {
+      Thread.sleep(HOLD_WAIT_MILLIS);
     }
   }
 
@@ -109,6 +173,14 @@ public class AracastDeliveryService {
 
   private boolean isDue(Player player) {
     Instant now = Instant.now();
+    Hold hold = holds.get(player.getId());
+    if (hold != null) {
+      if (hold.isActive(now)) {
+        return false;
+      }
+      holds.remove(player.getId(), hold);
+      lastChecked.remove(player.getId());
+    }
     Retry retry = retries.get(player.getId());
     if (retry != null
         && retry.version() == player.getDesiredVersion()
@@ -271,4 +343,24 @@ public class AracastDeliveryService {
   }
 
   private record Retry(long version, Instant notBefore) {}
+
+  /**
+   * Calendario congelado por una sesión de control remoto.
+   *
+   * @param since cuándo se congeló
+   * @param releaseAt cuándo se libera, o nulo mientras la sesión sigue abierta
+   */
+  private record Hold(Instant since, Instant releaseAt) {
+
+    Hold releasedAt(Instant when) {
+      return new Hold(since, when);
+    }
+
+    boolean isActive(Instant now) {
+      if (!since.plus(HOLD_MAX).isAfter(now)) {
+        return false;
+      }
+      return releaseAt == null || now.isBefore(releaseAt);
+    }
+  }
 }

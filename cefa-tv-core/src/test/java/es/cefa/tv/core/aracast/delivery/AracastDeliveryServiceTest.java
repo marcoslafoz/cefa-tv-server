@@ -10,6 +10,7 @@ import static org.mockito.ArgumentMatchers.contains;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.timeout;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -19,6 +20,7 @@ import es.cefa.tv.core.aracast.client.AracastCommandClient;
 import es.cefa.tv.core.aracast.model.AracastPlayer;
 import es.cefa.tv.core.aracast.plan.AracastPlan;
 import es.cefa.tv.core.aracast.plan.AracastPlanner;
+import es.cefa.tv.core.aracast.remote.AracastRemoteSessionEvent;
 import es.cefa.tv.core.aracast.repository.AracastPlayerRepository;
 import es.cefa.tv.core.aracast.service.AracastPlayerService;
 import es.cefa.tv.core.audit.model.AuditOutcome;
@@ -294,5 +296,26 @@ class AracastDeliveryServiceTest {
     verify(publisher).publish(eq("10.0.0.5"), any(AracastPlan.class), any());
     verify(playerService).recordPublished(eq(id), eq(3L), anyString());
     verify(audit, never()).recordSystem(any(), any(), any(), any(), any(), any());
+  }
+
+  @Test
+  void aRemoteSessionFreezesTheCalendarOfAPlayerItPublishedTo() {
+    aracast.setPublishedHash("anterior");
+
+    service.onRemoteSession(new AracastRemoteSessionEvent(player.getId(), true));
+
+    verify(publisher, timeout(2000)).hold("10.0.0.5");
+    verify(playerService, timeout(2000)).recordHeld(player.getId());
+  }
+
+  @Test
+  void aRemoteSessionDoesNotFreezeAPlayerCefaTvNeverPublishedTo() throws Exception {
+    aracast.setPublishedHash(null);
+
+    service.onRemoteSession(new AracastRemoteSessionEvent(player.getId(), true));
+
+    Thread.sleep(300);
+    verify(publisher, never()).hold(anyString());
+    verify(playerService, never()).recordHeld(any());
   }
 }
