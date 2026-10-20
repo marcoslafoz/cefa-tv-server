@@ -78,7 +78,8 @@ public class TemplateBuilder {
    * Plantilla que muestra una página web a pantalla completa.
    *
    * @param url dirección de la página
-   * @param interactive si admite ratón, desplazamiento y teclado
+   * @param interactive si admite ratón y desplazamiento; el teclado en pantalla del player queda
+   *     siempre desactivado porque interfiere con el texto del control remoto
    * @param background color de fondo {@code #RRGGBB}; blanco si es nulo
    */
   public String web(String url, boolean interactive, String background) {
@@ -90,7 +91,7 @@ public class TemplateBuilder {
             .put("color", (background == null ? "#ffffff" : background) + "ff"));
     shape.put("reactive", interactive);
     shape.put("scrollable", interactive);
-    shape.put("keyboard", interactive);
+    shape.put("keyboard", false);
     shape.put("userstyles", "");
     shape.put("userscripts", "");
     shape.put("url", url);

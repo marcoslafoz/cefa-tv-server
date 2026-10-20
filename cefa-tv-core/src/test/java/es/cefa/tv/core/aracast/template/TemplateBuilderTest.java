@@ -46,7 +46,7 @@ class TemplateBuilderTest {
     assertThat(w.path("url").asText()).isEqualTo("https://example.org");
     assertThat(w.path("reactive").asBoolean()).isTrue();
     assertThat(w.path("scrollable").asBoolean()).isTrue();
-    assertThat(w.path("keyboard").asBoolean()).isTrue();
+    assertThat(w.path("keyboard").asBoolean()).isFalse();
     assertThat(w.path("background").path("color").asText()).isEqualTo("#112233ff");
     JsonNode defaultBg = shape(builder.web("https://example.org", true, null), "HTML5Shape0");
     assertThat(defaultBg.path("background").path("color").asText()).isEqualTo("#ffffffff");
