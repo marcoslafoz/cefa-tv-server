@@ -171,7 +171,7 @@ public class AracastPublisher {
           case IMAGE -> templates.image(names.get(0));
           case SLIDESHOW -> templates.slideshow(names, template.secondsPerSlide());
           case VIDEOS -> templates.videos(names, template.muted());
-          case WEB -> templates.web(template.url(), false, "#ffffff");
+          case WEB -> templates.web(template.url(), true, "#ffffff");
           case HTML ->
               templates.web(
                   "http://localhost/" + webName(template) + "/index.html", true, "#ffffff");
