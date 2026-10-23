@@ -246,7 +246,6 @@ public class MediaService {
     UUID id = UUID.randomUUID();
     Path workDir = null;
     List<String> uploadedKeys = new ArrayList<>();
-    boolean handedOff = false;
     try {
       workDir = createWorkDir();
       Path original = workDir.resolve("original");
@@ -299,14 +298,8 @@ public class MediaService {
         uploadedKeys.add(thumbnailKey);
         asset.setThumbnailKey(thumbnailKey);
       }
-      boolean compressLater = type == MediaType.VIDEO && compression.enabled();
-      asset.setStatus(compressLater ? MediaStatus.PROCESSING : MediaStatus.READY);
-      MediaResponse response = persist(asset, files);
-      if (compressLater) {
-        events.publishEvent(new MediaCompressionRequested(id, workDir, original));
-        handedOff = true;
-      }
-      return response;
+      asset.setStatus(MediaStatus.READY);
+      return persist(asset, files);
     } catch (IOException e) {
       uploadedKeys.forEach(this::deleteQuietly);
       throw ApiException.unprocessable(
@@ -315,9 +308,7 @@ public class MediaService {
       uploadedKeys.forEach(this::deleteQuietly);
       throw e;
     } finally {
-      if (!handedOff) {
-        deleteRecursively(workDir);
-      }
+      deleteRecursively(workDir);
     }
   }
 

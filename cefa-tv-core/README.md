@@ -56,7 +56,7 @@ El perfil `dev` activa los logs de depuración. La documentación OpenAPI está 
 | `SERVER_PORT` | `8080` | Puerto publicado por Docker. |
 | `FFMPEG_PATH`, `FFPROBE_PATH` | `ffmpeg`, `ffprobe` | Ejecutables de procesado de vídeo. |
 | `MEDIA_TEMP_DIR` | temporal del sistema | Directorio donde se procesan las subidas. |
-| `MEDIA_COMPRESSION_ENABLED` | `true` | Comprime al subir a la biblioteca: las fotos JPEG/PNG al momento y los vídeos en segundo plano (el medio queda en `PROCESSING`). Sustituye al original solo si pesa menos; si no, lo conserva. |
+| `MEDIA_COMPRESSION_ENABLED` | `true` | Comprime las fotos JPEG/PNG al subirlas a la biblioteca. Los vídeos nunca se comprimen: quedan listos (`READY`) al instante. Sustituye al original solo si pesa menos; si no, lo conserva. |
 | `MEDIA_COMPRESSION_MAX_WIDTH` / `_MAX_HEIGHT` | `1920` / `1080` | Resolución máxima; nunca se amplía. |
 | `MEDIA_COMPRESSION_IMAGE_QUALITY` | `4` | Calidad JPEG de ffmpeg (2 a 31; 4 equivale a ≈85). |
 | `MEDIA_COMPRESSION_VIDEO_CRF` / `_VIDEO_PRESET` / `_AUDIO_BITRATE` | `23` / `fast` / `128k` | H.264 equilibrado y AAC; el vídeo sale siempre en MP4. |
