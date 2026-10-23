@@ -22,7 +22,7 @@ Nunca escribas aquí contraseñas, tokens, claves privadas ni cualquier otro sec
 
 | Entorno | Host / IP | Usuario | Acceso | Ruta del proyecto | Servicios |
 |---|---|---|---|---|---|
-| Producción | `10.21.35.133` (Debian 13) | `root` | SSH con contraseña; la contraseña está en el gestor de contraseñas de CEFA, no en el repositorio | `/root/cefa-tv-server` | Contenedores `cefa-tv-core-app`, `cefa-tv-core-db`, `cefa-tv-core-garage`, `cefa-tv-core-discovery`, `cefa-tv-app-app` y `cefa-tv-app-nginx`. Web en el puerto 4000 (detrás de `tv.cefa.es`) y API del core en el 8080. |
+| Producción | `10.0.10.105` (Debian 13) | `root` | SSH con contraseña; la contraseña está en el gestor de contraseñas de CEFA, no en el repositorio | `/root/cefa-tv-server` | Contenedores `cefa-tv-core-app`, `cefa-tv-core-db`, `cefa-tv-core-garage`, `cefa-tv-core-discovery`, `cefa-tv-app-app` y `cefa-tv-app-nginx`. Web en el puerto 4000 (detrás de `tv.cefa.es`) y API del core en el 8080. |
 
 ## Sistemas externos
 
