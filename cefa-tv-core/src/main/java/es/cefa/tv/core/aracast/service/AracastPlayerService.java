@@ -44,6 +44,9 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class AracastPlayerService {
 
+  /** Resumen que marca un calendario congelado por el control remoto; ningún plan lo produce. */
+  public static final String HELD_HASH = "held";
+
   private static final String CUSTOM_CFG = "/root/.aracast/data/custom.cfg";
   private static final Pattern FTP_PASSWORD =
       Pattern.compile("(?ims)^\\[FTP\\].*?^password\\s*=\\s*(\\S.*?)\\s*$");
@@ -217,6 +220,24 @@ public class AracastPlayerService {
     aracast.setPublishedHash(planHash);
     aracast.setPublishedAt(Instant.now());
     deliveries.markApplied(playerId, version);
+  }
+
+  /**
+   * Anota que el calendario del player está congelado por una sesión de control remoto. El resumen
+   * deja de coincidir con el de cualquier plan, así que el siguiente repaso de la entrega publica
+   * el calendario real, incluso si el servidor se reinicia mientras dura la sesión.
+   *
+   * @param playerId reproductor
+   */
+  @Transactional
+  public void recordHeld(UUID playerId) {
+    aracasts
+        .findById(playerId)
+        .ifPresent(
+            aracast -> {
+              aracast.setPublishedHash(HELD_HASH);
+              aracast.setPublishedAt(Instant.now());
+            });
   }
 
   /**

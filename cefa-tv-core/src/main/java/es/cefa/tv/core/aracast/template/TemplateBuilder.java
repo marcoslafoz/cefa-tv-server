@@ -89,7 +89,8 @@ public class TemplateBuilder {
    * Plantilla que muestra una página web a pantalla completa.
    *
    * @param url dirección de la página
-   * @param interactive si admite ratón y desplazamiento
+   * @param interactive si admite ratón y desplazamiento; el teclado en pantalla del player queda
+   *     siempre desactivado porque interfiere con el texto del control remoto
    * @param background color de fondo {@code #RRGGBB}; blanco si es nulo
    */
   public String web(String url, boolean interactive, String background) {

@@ -30,6 +30,7 @@ import es.cefa.tv.core.aracast.template.TemplateBuilder;
 import es.cefa.tv.core.player.model.IdleLogo;
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.security.MessageDigest;
@@ -217,6 +218,32 @@ class AracastPublisherTest {
     assertThat(second.templatesInstalled()).isZero();
     verify(commands, never()).send(eq(HOST), eq("Template.uploadTemplate"), anyMap());
     verify(commands).send(HOST, "Player.updateEvents");
+  }
+
+  @Test
+  void holdLeavesOnlyTheCurrentTemplateInTheCalendarWithoutTouchingTemplates() throws Exception {
+    when(query.getStatus(HOST)).thenReturn(status(IMAGE.name(), IDLE.name()));
+
+    String held = publisher.hold(HOST);
+
+    assertThat(held).isEqualTo(IMAGE.name());
+    ArgumentCaptor<InputStream> upload = ArgumentCaptor.forClass(InputStream.class);
+    verify(ftp).upload(eq(HOST), eq("events.ics"), upload.capture());
+    String ics = new String(upload.getValue().readAllBytes(), StandardCharsets.UTF_8);
+    assertThat(ics).contains("SUMMARY:" + IMAGE.name()).containsOnlyOnce("BEGIN:VEVENT");
+    verify(commands).send(HOST, "Player.loadEvents");
+    verify(commands).send(HOST, "Player.updateEvents");
+    verify(commands, never()).send(eq(HOST), eq("Template.uploadTemplate"), anyMap());
+    verify(commands, never()).send(eq(HOST), eq("Template.deleteTemplate"), anyMap());
+  }
+
+  @Test
+  void holdFailsWhenThePlayerDoesNotReportItsCurrentTemplate() {
+    when(query.getStatus(HOST)).thenReturn(status("", IDLE.name()));
+
+    org.assertj.core.api.Assertions.assertThatThrownBy(() -> publisher.hold(HOST))
+        .isInstanceOf(es.cefa.tv.core.aracast.exception.AracastException.class);
+    verify(ftp, never()).upload(eq(HOST), eq("events.ics"), any(InputStream.class));
   }
 
   @Test

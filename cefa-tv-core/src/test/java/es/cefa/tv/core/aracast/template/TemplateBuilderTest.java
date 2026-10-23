@@ -48,14 +48,16 @@ class TemplateBuilderTest {
   @Test
   void videosYWeb() throws Exception {
     JsonNode v = shape(builder.videos(List.of("v_1.mp4")), "VideoFileShape0");
-    JsonNode w = shape(builder.web("https://example.org", false, "#112233"), "HTML5Shape0");
+    JsonNode w = shape(builder.web("https://example.org", true, "#112233"), "HTML5Shape0");
 
     assertThat(v.path("video").get(0).asText()).isEqualTo("@content_path@/v_1.mp4");
     assertThat(v.path("loop").asBoolean()).isTrue();
     assertThat(w.path("url").asText()).isEqualTo("https://example.org");
-    assertThat(w.path("reactive").asBoolean()).isFalse();
+    assertThat(w.path("reactive").asBoolean()).isTrue();
+    assertThat(w.path("scrollable").asBoolean()).isTrue();
+    assertThat(w.path("keyboard").asBoolean()).isFalse();
     assertThat(w.path("background").path("color").asText()).isEqualTo("#112233ff");
-    JsonNode defaultBg = shape(builder.web("https://example.org", false, null), "HTML5Shape0");
+    JsonNode defaultBg = shape(builder.web("https://example.org", true, null), "HTML5Shape0");
     assertThat(defaultBg.path("background").path("color").asText()).isEqualTo("#ffffffff");
   }
 }

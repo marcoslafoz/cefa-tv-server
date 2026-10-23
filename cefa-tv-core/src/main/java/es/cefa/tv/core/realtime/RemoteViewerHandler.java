@@ -72,8 +72,23 @@ public class RemoteViewerHandler extends TextWebSocketHandler {
   }
 
   @Override
+  public void handleTransportError(WebSocketSession session, Throwable exception) {
+    log.warn(
+        "Error de transporte en el visor remoto {} del reproductor {}: {}",
+        session.getId(),
+        playerId(session),
+        exception.toString());
+  }
+
+  @Override
   public void afterConnectionClosed(WebSocketSession session, CloseStatus status) {
     UUID playerId = playerId(session);
+    log.info(
+        "Visor remoto {} del reproductor {} cerrado: código {} {}",
+        session.getId(),
+        playerId,
+        status.getCode(),
+        status.getReason());
     stop(playerId, session);
     registry.removeViewer(playerId, session.getId());
   }

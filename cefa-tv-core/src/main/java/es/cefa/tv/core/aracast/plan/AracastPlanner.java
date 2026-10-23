@@ -17,6 +17,7 @@ import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.EnumSet;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -68,13 +69,29 @@ public final class AracastPlanner {
    * @param now instante actual en la zona horaria del reproductor
    * @param idle logo de la pantalla en reposo
    * @return plantillas y eventos
-   * @throws UnsupportedPlaylistException si una playlist no se puede emitir
+   * @throws UnsupportedPlaylistException si una playlist de una programación activa no se puede
+   *     emitir; las playlists que ninguna programación usa y una de reposo no emitible se ignoran
    */
   public static AracastPlan plan(ManifestDocument manifest, LocalDateTime now, IdleLogo idle) {
     LocalDate today = now.toLocalDate();
     Map<String, PlaylistPlan> playlists = new LinkedHashMap<>();
+    Set<String> scheduled = new HashSet<>();
+    nullSafe(manifest.schedules()).stream()
+        .filter(ScheduleEntry::enabled)
+        .forEach(s -> scheduled.add(s.playlistId()));
+    String fallbackId =
+        manifest.fallbackPlaylistId() == null ? null : manifest.fallbackPlaylistId().toString();
     for (PlaylistEntry playlist : nullSafe(manifest.playlists()).values()) {
-      playlists.put(playlist.id(), planPlaylist(playlist, manifest));
+      if (scheduled.contains(playlist.id())) {
+        playlists.put(playlist.id(), planPlaylist(playlist, manifest));
+      } else if (playlist.id().equals(fallbackId)) {
+        try {
+          playlists.put(playlist.id(), planPlaylist(playlist, manifest));
+        } catch (UnsupportedPlaylistException e) {
+          // La playlist de reposo no usable no debe impedir publicar la programación: se muestra el
+          // logo de reposo.
+        }
+      }
     }
     Map<EventKey, Set<DayOfWeek>> weekly = new LinkedHashMap<>();
     List<Segment> cycles = new ArrayList<>();

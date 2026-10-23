@@ -377,6 +377,30 @@ class AracastPlannerTest {
   }
 
   @Test
+  void anEmptyRestPlaylistDoesNotBlockTheSchedule() {
+    web("w", "https://hermes.cefa.es/");
+    playlist(P1, "Contenido");
+    playlist(P2, "Web", item("w", 60));
+    fallback = P1;
+    schedule(P2, 10, null, null, null, null, List.of(), true);
+
+    AracastPlan plan = plan();
+
+    assertThat(plan.events()).hasSize(1);
+    assertThat(plan.events().get(0).template()).startsWith("Web");
+  }
+
+  @Test
+  void ignoresAnEmptyPlaylistNoScheduleUses() {
+    web("w", "https://hermes.cefa.es/");
+    playlist(P1, "Sin usar");
+    playlist(P2, "Web", item("w", 60));
+    schedule(P2, 10, null, null, null, null, List.of(), true);
+
+    assertThat(plan().events()).hasSize(1);
+  }
+
+  @Test
   void ignoresDisabledSchedules() {
     image("a");
     playlist(P1, "Apagada", item("a", 10));
