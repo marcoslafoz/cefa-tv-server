@@ -6,5 +6,6 @@ package es.cefa.tv.core.player.model;
  *
  * @param preferredOutput salida de vídeo elegida, o {@code null} para la selección automática
  * @param idleLogo logo efectivo de la pantalla sin programación
+ * @param volume volumen del sonido de los vídeos, de 0 a 100
  */
-public record PlayerConfig(String preferredOutput, IdleLogo idleLogo) {}
+public record PlayerConfig(String preferredOutput, IdleLogo idleLogo, int volume) {}

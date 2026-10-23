@@ -90,7 +90,8 @@ public class PlayerApiService {
   /** Convierte una orden pendiente en su representación para el heartbeat. */
   /** Convierte la configuración del reproductor en la parte de configuración del heartbeat. */
   private HeartbeatResponse.Config toConfig(PlayerConfig config) {
-    return new HeartbeatResponse.Config(config.preferredOutput(), config.idleLogo().name());
+    return new HeartbeatResponse.Config(
+        config.preferredOutput(), config.idleLogo().name(), config.volume());
   }
 
   private HeartbeatResponse.Command toCommand(PendingCommand command) {

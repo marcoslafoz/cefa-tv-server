@@ -97,7 +97,7 @@ public class AracastPublisher {
       Map<String, Path> missing = missingContents(host, plan, fileNames, work);
       Map<PlannedTemplate, Prepared> toInstall = new LinkedHashMap<>();
       for (PlannedTemplate template : plan.allTemplates()) {
-        Prepared prepared = prepare(template, fileNames, work);
+        Prepared prepared = prepare(template, fileNames, work, plan.volume());
         PlayerTemplate current = installed.get(template.name());
         boolean notDefault = template == plan.idle() && !template.name().equals(currentDefault);
         if (current == null || !prepared.sha1().equalsIgnoreCase(current.hash()) || notDefault) {
@@ -163,14 +163,15 @@ public class AracastPublisher {
     return missing;
   }
 
-  private Prepared prepare(PlannedTemplate template, Map<String, String> fileNames, Path work) {
+  private Prepared prepare(
+      PlannedTemplate template, Map<String, String> fileNames, Path work, int volume) {
     List<String> names = template.contents().stream().map(c -> fileNames.get(c.sha256())).toList();
     String webName = null;
     String json =
         switch (template.kind()) {
           case IMAGE -> templates.image(names.get(0));
           case SLIDESHOW -> templates.slideshow(names, template.secondsPerSlide());
-          case VIDEOS -> templates.videos(names, template.muted());
+          case VIDEOS -> templates.videos(names, template.muted(), volume);
           case WEB -> templates.web(template.url(), false, "#ffffff");
           case HTML ->
               templates.web(

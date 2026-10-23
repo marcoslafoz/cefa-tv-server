@@ -31,6 +31,7 @@ import {
   type IdleLogoValue,
 } from '@/components/players/idle-logo-select'
 import { MetricsCharts } from '@/components/players/metrics-charts'
+import { VolumeControl } from '@/components/players/volume-control'
 import { ShellAuditTable } from '@/components/players/shell-audit-table'
 import { SystemPanel } from '@/components/players/system-panel'
 import { ConfirmDialog } from '@/components/shared/confirm-dialog'
@@ -222,6 +223,15 @@ function PlayerDetail() {
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-2">
+          <VolumeControl
+            playerId={id}
+            volume={current.volume}
+            disabled={!canManage}
+            onVolumeChange={(volume) =>
+              player.setData((previous) => (previous ? { ...previous, volume } : previous))
+            }
+            onPlayerUpdated={player.setData}
+          />
           {canRemote ? (
             <Button asChild disabled={!current.online}>
               <Link href={localePath(`/players/${id}/remote`)}>

@@ -130,6 +130,9 @@ public class PlayerService {
       player.setStatus(request.status());
     }
     applyPreferredOutput(player, request);
+    if (request.volume() != null) {
+      player.setVolume(request.volume());
+    }
     applyIdleLogo(player, request);
     applyDescriptionAndSite(player, request);
     if (!previousConfig.equals(commandService.configOf(player))) {
@@ -252,6 +255,7 @@ public class PlayerService {
         player.getHardware(),
         player.getResolution(),
         player.getPreferredOutput(),
+        player.getVolume(),
         player.getIdleLogo(),
         logo.logo(),
         logo.source(),
@@ -370,6 +374,7 @@ public class PlayerService {
             || (Boolean.TRUE.equals(request.clearSite()) && player.getSiteId() != null)
             || (request.preferredOutput() != null && !request.preferredOutput().isBlank())
             || Boolean.TRUE.equals(request.clearPreferredOutput())
+            || (request.volume() != null && request.volume() != player.getVolume())
             || (request.idleLogo() != null && request.idleLogo() != player.getIdleLogo())
             || (Boolean.TRUE.equals(request.clearIdleLogo()) && player.getIdleLogo() != null);
     if (touchesPlayer) {

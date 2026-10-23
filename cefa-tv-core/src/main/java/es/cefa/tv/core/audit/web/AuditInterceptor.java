@@ -44,6 +44,7 @@ public class AuditInterceptor implements HandlerInterceptor {
   private static final Map<String, String> PLAYER_FIELD_ACTIONS =
       Map.of(
           "preferredOutput", "PLAYER_OUTPUT_CHANGE",
+          "volume", "PLAYER_VOLUME_CHANGE",
           "site", "PLAYER_SITE_ASSIGN",
           "idleLogo", "PLAYER_IDLE_LOGO_CHANGE");
   private static final int MAX_UPLOAD_ENTRIES = 50;

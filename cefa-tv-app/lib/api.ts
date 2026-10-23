@@ -205,7 +205,7 @@ export const api = {
     get: (id: string) => apiClient.get<Player>(`${API_V1}/players/${id}`),
     update: (
       id: string,
-      input: Partial<Pick<Player, 'name' | 'orientation' | 'status'>> & {
+      input: Partial<Pick<Player, 'name' | 'orientation' | 'status' | 'volume'>> & {
         groupId?: string | null
         fallbackPlaylistId?: string | null
         clearFallbackPlaylist?: boolean

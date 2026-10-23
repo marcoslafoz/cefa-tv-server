@@ -37,6 +37,15 @@ class TemplateBuilderTest {
   }
 
   @Test
+  void elVolumenEscalaLosVideosConSonidoYNoLosSilenciados() throws Exception {
+    JsonNode loud = shape(builder.videos(List.of("v_1.mp4"), false, 40), "VideoFileShape0");
+    JsonNode muted = shape(builder.videos(List.of("v_1.mp4"), true, 40), "VideoFileShape0");
+
+    assertThat(loud.path("volume").asInt()).isEqualTo(40);
+    assertThat(muted.path("volume").asInt()).isZero();
+  }
+
+  @Test
   void videosYWeb() throws Exception {
     JsonNode v = shape(builder.videos(List.of("v_1.mp4")), "VideoFileShape0");
     JsonNode w = shape(builder.web("https://example.org", false, "#112233"), "HTML5Shape0");

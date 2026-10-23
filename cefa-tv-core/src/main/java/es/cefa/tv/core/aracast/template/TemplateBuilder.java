@@ -63,8 +63,19 @@ public class TemplateBuilder {
    * @param muted si se emiten sin sonido
    */
   public String videos(List<String> files, boolean muted) {
+    return videos(files, muted, 100);
+  }
+
+  /**
+   * Plantilla de vídeos en bucle con un volumen.
+   *
+   * @param files vídeos en orden
+   * @param muted si se emiten sin sonido, sea cual sea el volumen
+   * @param volume volumen de 0 a 100
+   */
+  public String videos(List<String> files, boolean muted, int volume) {
     ObjectNode shape = baseShape("Video");
-    shape.put("volume", muted ? 0 : 100);
+    shape.put("volume", muted ? 0 : volume);
     shape.set("video", paths(files));
     shape.put("randomOrder", false);
     shape.set("expiryDate", blanks(files.size()));

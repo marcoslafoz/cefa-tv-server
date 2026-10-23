@@ -27,6 +27,7 @@ import java.util.UUID;
  * @param resolution resolución de la salida de vídeo elegida
  * @param preferredOutput salida de vídeo que el usuario eligió para el reproductor, o {@code null}
  *     si es automática (la primera conectada)
+ * @param volume volumen del sonido de los vídeos, de 0 a 100
  * @param idleLogo logo propio de la pantalla sin programación, o {@code null} si hereda
  * @param effectiveIdleLogo logo que realmente muestra: el propio, el de su grupo o el de por
  *     defecto
@@ -69,6 +70,7 @@ public record PlayerResponse(
     Map<String, Object> hardware,
     String resolution,
     String preferredOutput,
+    int volume,
     IdleLogo idleLogo,
     IdleLogo effectiveIdleLogo,
     IdleLogoSource idleLogoSource,

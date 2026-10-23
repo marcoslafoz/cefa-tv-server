@@ -11,12 +11,34 @@ import java.util.List;
  * @param idle plantilla de la pantalla en reposo, que el player emite cuando no hay ningún evento
  * @param rolling si hay eventos con fecha, que hay que regenerar a menudo porque solo cubren las
  *     próximas horas
+ * @param volume volumen del sonido de los vídeos, de 0 a 100 (lo que está marcado sin sonido sigue
+ *     en silencio)
  */
 public record AracastPlan(
     List<PlannedTemplate> templates,
     List<PlannedEvent> events,
     PlannedTemplate idle,
-    boolean rolling) {
+    boolean rolling,
+    int volume) {
+
+  /** Plan con el volumen máximo. */
+  public AracastPlan(
+      List<PlannedTemplate> templates,
+      List<PlannedEvent> events,
+      PlannedTemplate idle,
+      boolean rolling) {
+    this(templates, events, idle, rolling, 100);
+  }
+
+  /**
+   * Copia del plan con otro volumen.
+   *
+   * @param level volumen de 0 a 100
+   * @return el plan con ese volumen
+   */
+  public AracastPlan withVolume(int level) {
+    return new AracastPlan(templates, events, idle, rolling, level);
+  }
 
   /**
    * Todas las plantillas que deben estar en el player, la de reposo incluida.

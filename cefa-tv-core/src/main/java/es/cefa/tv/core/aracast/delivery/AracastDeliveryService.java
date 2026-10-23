@@ -153,7 +153,10 @@ public class AracastDeliveryService {
     try {
       plan =
           AracastPlanner.plan(
-              manifest.getManifest(), LocalDateTime.now(zone), idleLogos.effective(player).logo());
+                  manifest.getManifest(),
+                  LocalDateTime.now(zone),
+                  idleLogos.effective(player).logo())
+              .withVolume(player.getVolume());
     } catch (UnsupportedPlaylistException e) {
       fail(player, aracast, version, pending, e.getMessage(), FAILURE_RETRY);
       return;

@@ -60,14 +60,15 @@ public class PlayerCommandService {
   }
 
   /**
-   * Calcula la configuración que debe tener un reproductor: la salida de vídeo elegida y el logo
-   * efectivo de la pantalla sin programación.
+   * Calcula la configuración que debe tener un reproductor: la salida de vídeo elegida, el logo
+   * efectivo de la pantalla sin programación y el volumen.
    *
    * @param player reproductor
    * @return la configuración
    */
   public PlayerConfig configOf(Player player) {
-    return new PlayerConfig(player.getPreferredOutput(), idleLogos.effective(player).logo());
+    return new PlayerConfig(
+        player.getPreferredOutput(), idleLogos.effective(player).logo(), player.getVolume());
   }
 
   /**
@@ -91,6 +92,7 @@ public class PlayerCommandService {
     node.put("type", "CONFIG");
     node.put("preferredOutput", config.preferredOutput());
     node.put("idleLogo", config.idleLogo().name());
+    node.put("volume", config.volume());
     return node.toString();
   }
 

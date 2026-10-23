@@ -72,6 +72,8 @@ public class Player {
   @Column(name = "preferred_output")
   private String preferredOutput;
 
+  private int volume = 100;
+
   @Enumerated(EnumType.STRING)
   @Column(name = "idle_logo")
   private IdleLogo idleLogo;

@@ -16,8 +16,9 @@ public record HeartbeatResponse(long desiredVersion, List<Command> commands, Con
    *
    * @param preferredOutput salida de vídeo elegida, o {@code null} para la selección automática
    * @param idleLogo logo efectivo de la pantalla sin programación: {@code CEFA} o {@code ALGONTEC}
+   * @param volume volumen del sonido de los vídeos, de 0 a 100
    */
-  public record Config(String preferredOutput, String idleLogo) {}
+  public record Config(String preferredOutput, String idleLogo, int volume) {}
 
   /**
    * Orden para el reproductor.

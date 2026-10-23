@@ -53,6 +53,7 @@ public class PlayerSnapshot implements AuditSnapshotSource {
             : groups.findById(player.getGroupId()).map(PlayerGroup::getName).orElse(null));
     state.put("orientation", player.getOrientation());
     state.put("preferredOutput", player.getPreferredOutput());
+    state.put("volume", player.getVolume());
     state.put("idleLogo", player.getIdleLogo() == null ? null : player.getIdleLogo().name());
     state.put("status", player.getStatus().name());
     state.put(

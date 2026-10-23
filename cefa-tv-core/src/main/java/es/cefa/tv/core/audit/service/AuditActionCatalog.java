@@ -59,6 +59,7 @@ public final class AuditActionCatalog {
           new AuditActionResponse("PLAYER_DISPLAY_REDETECT", "PLAYER"),
           new AuditActionResponse("PLAYER_DISPLAY_RESOLUTION", "PLAYER"),
           new AuditActionResponse("PLAYER_OUTPUT_CHANGE", "PLAYER"),
+          new AuditActionResponse("PLAYER_VOLUME_CHANGE", "PLAYER"),
           new AuditActionResponse("PLAYER_IDLE_LOGO_CHANGE", "PLAYER"),
           new AuditActionResponse("PLAYER_REMOTE_START", "PLAYER"),
           new AuditActionResponse("PLAYER_REMOTE_STOP", "PLAYER"),

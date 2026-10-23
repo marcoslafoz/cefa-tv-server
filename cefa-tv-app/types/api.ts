@@ -252,6 +252,7 @@ export interface Player {
   system?: PlayerSystem | null
   displays?: PlayerDisplay[] | null
   hardware?: AracastHardware | null
+  volume: number
 }
 
 export interface AracastStatus {

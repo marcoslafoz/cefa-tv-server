@@ -2,6 +2,8 @@ package es.cefa.tv.core.player.dto;
 
 import es.cefa.tv.core.player.model.IdleLogo;
 import es.cefa.tv.core.player.model.PlayerStatus;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.Size;
 import java.util.UUID;
 
@@ -20,6 +22,7 @@ import java.util.UUID;
  * @param description nueva descripción; una cadena vacía la borra
  * @param siteId nueva sede
  * @param clearSite quita la sede del reproductor
+ * @param volume volumen del sonido de los vídeos, de 0 a 100
  * @param idleLogo logo propio de la pantalla sin programación
  * @param clearIdleLogo quita el logo propio para que herede el de su grupo o el de por defecto
  */
@@ -36,5 +39,6 @@ public record PlayerUpdateRequest(
     @Size(max = 500) String description,
     UUID siteId,
     Boolean clearSite,
+    @Min(0) @Max(100) Integer volume,
     IdleLogo idleLogo,
     Boolean clearIdleLogo) {}
